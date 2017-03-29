@@ -1,16 +1,18 @@
 # modulus
-Compile kernel modules automatically for Container Linux.
+Automatically compile kernel modules for CoreOS Container Linux.
 
 ## Background
-Compiling drivers on Container Linux is typically non-trivial because the OS ships without build tools and no obvious way to access the kernel sources. Modulus works by compiling your kernel modules inside of a Container Linux developer container as documented in [[1](https://github.com/coreos/docs/blob/master/os/kernel-modules.md)]. Furthermore, because Container Linux updates automatically to keep your machine secure, your kernel modules can easily become out of date. Modulus automatically compiles kernel modules for the new version of Container Linux when your OS is upgrading so that the new modules are available when your machine restarts. Modulus is primarily a systemd template unit that can be coupled with any script that compiles kernel modules. This project currently includes a script for generating Nvidia drivers, however it can be extended to support any drivers.
+Compiling drivers on Container Linux is typically non-trivial because the OS ships without build tools and no obvious way to access the kernel sources. Modulus works by compiling your kernel modules inside of a Container Linux developer container as documented in [[1](https://github.com/coreos/docs/blob/master/os/kernel-modules.md)] and used in [[2](https://github.com/Clarifai/coreos-nvidia)]. Furthermore, because Container Linux updates automatically to keep your machine secure, your kernel modules can easily become out of date. Modulus automatically compiles kernel modules for the new version of Container Linux when your OS is upgrading so that the new modules are available when your machine restarts. Modulus is primarily a systemd template unit that can be coupled with any script that compiles kernel modules. This project currently includes a script for generating Nvidia drivers, however it can be extended to support any driver.
 
 [1] https://github.com/coreos/docs/blob/master/os/kernel-modules.md
+
+[2] https://github.com/Clarifai/coreos-nvidia
 
 ## Installation
 ```sh
 git clone git@github.com:squat/modulus.git && cd modulus
 sudo mkdir -p /opt/bin
-sudo cp modulus /opt/bin
+sudo cp modulus /opt/bin/
 sudo cp modulus@.service /etc/systemd/system/modulus@.service
 ```
 
