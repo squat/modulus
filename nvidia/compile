@@ -1,0 +1,26 @@
+#!/bin/bash
+
+echo "Preparing environment"
+/usr/bin/emerge-gitclone
+git -C /var/lib/portage/coreos-overlay checkout "build-${COREOS_RELEASE_VERSION%%.*}"
+emerge -v coreos-sources
+cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
+KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
+make -C /usr/src/linux modules_prepare
+
+echo "Compiling NVIDIA modules"
+curl -Ls "http://us.download.nvidia.com/XFree86/Linux-x86_64/$DRIVER_VERSION/NVIDIA-Linux-x86_64-$DRIVER_VERSION.run" -o nvidia.run
+chmod +x nvidia.run
+./nvidia.run -x -s
+pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
+./nvidia-installer -s -n --kernel-source-path=/usr/src/linux --no-check-for-alternate-installs --no-opengl-files --kernel-install-path="$PWD" --log-file-name="$PWD"/nvidia-installer.log
+
+echo "Archiving assets"
+mkdir -p /out/lib /out/bin /out/modules/"$KERNEL_VERSION" /out/tar
+cp kernel/*.ko /out/modules/"$KERNEL_VERSION"
+cp ./*.so* /out/lib
+for b in nvidia-debugdump nvidia-cuda-mps-control nvidia-xconfig nvidia-modprobe nvidia-smi nvidia-cuda-mps-server nvidia-persistenced nvidia-settings; do cp "$b" /out/bin/; done
+tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION"-bin.tar.gz /out/bin
+tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION"-lib.tar.gz /out/lib
+tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION"-kernel.tar.gz /out/modules/"$(uname -r)"
+mv ./*.tar.gz /out/tar

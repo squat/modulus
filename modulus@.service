@@ -1,0 +1,16 @@
+[Unit]
+Description=compile kernel modules
+Requires=network-online.target update-engine.service
+After=network-online.target update-engine.service
+
+[Service]
+EnvironmentFile=/usr/share/coreos/release
+EnvironmentFile=/usr/share/coreos/update.conf
+EnvironmentFile=/etc/coreos/update.conf
+Type=oneshot
+RemainAfterExit=yes
+ExecStop=/opt/bin/modulus ${GROUP} ${COREOS_RELEASE_BOARD} ${COREOS_RELEASE_VERSION} %i
+
+TimeoutStopSec=infinity
+[Install]
+WantedBy=multi-user.target

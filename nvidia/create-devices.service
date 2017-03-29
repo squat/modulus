@@ -1,0 +1,19 @@
+[Unit]
+Description=load kernel modules and create nvidia devices
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/sbin/depmod
+ExecStartPre=/usr/sbin/modprobe nvidia
+ExecStartPre=/usr/sbin/modprobe nvidia-uvm
+ExecStart=/bin/bash -c 'NVDEVS=`lspci | grep -i NVIDIA` && \
+	N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l` && \
+	NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l` && \
+	N=`expr $N3D + $NVGA - 1` ; \
+	for i in `seq 0 $N`; do mknod -m 666 /dev/nvidia$i c 195 $i; done && \
+	mknod -m 666 /dev/nvidiactl c 195 255 && \
+	D=`grep nvidia-uvm /proc/devices | cut -d " " -f 1` && \
+	mknod -m 666 /dev/nvidia-uvm c $D 0'
+
+[Install]
+WantedBy=multi-user.target
