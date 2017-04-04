@@ -13,6 +13,10 @@ curl -Ls "http://us.download.nvidia.com/XFree86/Linux-x86_64/$DRIVER_VERSION/NVI
 chmod +x nvidia.run
 ./nvidia.run -x -s
 pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
+if echo $KERNEL_VERSION | grep -q "^4.10" ; then
+  curl -O https://pkgs.rpmfusion.org/cgit/nonfree/nvidia-kmod.git/plain/kernel_4.10.patch
+  patch -p1 < kernel_4.10.patch
+fi
 ./nvidia-installer -s -n --kernel-source-path=/usr/src/linux --no-check-for-alternate-installs --no-opengl-files --kernel-install-path="$PWD" --log-file-name="$PWD"/nvidia-installer.log
 
 echo "Archiving assets"
