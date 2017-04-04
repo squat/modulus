@@ -27,6 +27,8 @@ sudo systemd-nspawn \
     --setenv=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
     /opt/bin/"$DRIVER_VERSION"
 
+# Export modules and assets
+cp -r ./out/modules/* /opt/modules/
 . /home/core/awsenv
 for t in ./out/tar/*.tar.gz; do \
     rkt run \
