@@ -19,13 +19,13 @@ sudo cp modulus@.service /etc/systemd/system/modulus@.service
 ## Compiling Nvidia Kernel Modules
 Copy the `nvidia/compile` script to `/opt/bin` with the version of Nvidia that you want to compile as the filename:
 ```sh
-sudo cp nvidia/compile /opt/bin/375.26
+sudo cp nvidia/compile /opt/bin/378.13
 ```
 
 Enable the modulus service:
 ```sh
-sudo systemctl enable modulus@375.26
-sudo systemctl start modulus@375.26
+sudo systemctl enable modulus@378.13
+sudo systemctl start modulus@378.13
 ```
 
 ## Distribution
