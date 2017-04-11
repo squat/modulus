@@ -3,9 +3,9 @@ Description=load kernel modules and create nvidia devices
 
 [Service]
 Type=oneshot
-ExecStartPre=/usr/sbin/depmod
-ExecStartPre=/usr/sbin/modprobe nvidia
-ExecStartPre=/usr/sbin/modprobe nvidia-uvm
+ExecStartPre=/usr/sbin/depmod -b /opt/%i
+ExecStartPre=/usr/sbin/modprobe -d /opt/%i nvidia
+ExecStartPre=/usr/sbin/modprobe -d /opt/%i nvidia-uvm
 ExecStart=/bin/bash -c 'NVDEVS=`lspci | grep -i NVIDIA` && \
 	N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l` && \
 	NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l` && \

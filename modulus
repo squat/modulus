@@ -28,15 +28,17 @@ sudo systemd-nspawn \
     /opt/bin/"$DRIVER_VERSION"
 
 # Export modules and assets
-cp -r ./out/modules/* /opt/modules/
+mkdir -p /opt/"$DRIVER_VERSION"
+cp -r ./out/* /opt/"$DRIVER_VERSION"/
+tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz ./out
 . /home/core/awsenv
-for t in ./out/tar/*.tar.gz; do \
+for t in ./*.tar.gz; do \
     rkt run \
         --net=host \
         --dns=host \
         --trust-keys-from-https quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
-        --volume=out,kind=host,source="$PWD"/out \
-        --mount=volume=out,target=/out \
+        --volume=out,kind=host,source="$PWD"/"$t" \
+        --mount=volume=out,target=/"$t" \
         --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
         --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-        --exec=/usr/bin/aws -- s3 cp "$t" "$S3_BUCKET" ; done
+        --exec=/usr/bin/aws -- s3 cp /"$t" "$S3_BUCKET" ; done
