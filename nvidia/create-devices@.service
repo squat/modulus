@@ -1,11 +1,14 @@
 [Unit]
 Description=load kernel modules and create nvidia devices
+After=modulus@%i.service
+Requires=modulus@%i.service
 
 [Service]
 Type=oneshot
-ExecStartPre=/usr/sbin/depmod -b /opt/%i
-ExecStartPre=/usr/sbin/modprobe -d /opt/%i nvidia
-ExecStartPre=/usr/sbin/modprobe -d /opt/%i nvidia-uvm
+RemainAfterExit=yes
+ExecStart=/usr/sbin/depmod -b /opt/%i
+ExecStart=/usr/sbin/modprobe -d /opt/%i nvidia
+ExecStart=/usr/sbin/modprobe -d /opt/%i nvidia-uvm
 ExecStart=/bin/bash -c 'NVDEVS=`lspci | grep -i NVIDIA` && \
 	N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l` && \
 	NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l` && \
@@ -14,6 +17,15 @@ ExecStart=/bin/bash -c 'NVDEVS=`lspci | grep -i NVIDIA` && \
 	mknod -m 666 /dev/nvidiactl c 195 255 && \
 	D=`grep nvidia-uvm /proc/devices | cut -d " " -f 1` && \
 	mknod -m 666 /dev/nvidia-uvm c $D 0'
+ExecStop=/bin/bash -c 'NVDEVS=`lspci | grep -i NVIDIA` && \
+        N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l` && \
+        NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l` && \
+        N=`expr $N3D + $NVGA - 1` ; \
+        for i in `seq 0 $N`; do rm /dev/nvidia$i; done && \
+        rm /dev/nvidiactl && \
+        rm /dev/nvidia-uvm'
+ExecStop=/usr/sbin/rmmod nvidia-uvm
+ExecStop=/usr/sbin/rmmod nvidia
 
 [Install]
 WantedBy=multi-user.target

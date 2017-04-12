@@ -10,13 +10,13 @@ EnvironmentFile=/etc/coreos/update.conf
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=-/opt/bin/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download %i
-ExecStart=-/opt/bin/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} export %i
+ExecStart=-/opt/bin/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} install %i
 ExecStart=/opt/bin/modulus -u -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile %i
-ExecStart=/opt/bin/modulus export %i
+ExecStart=/opt/bin/modulus install %i
 ExecStop=-/opt/bin/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download %i
-ExecStop=-/opt/bin/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} export %i
+ExecStop=-/opt/bin/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} install %i
 ExecStop=/opt/bin/modulus -cu -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile %i
-ExecStop=/opt/bin/modulus export %i
+ExecStop=/opt/bin/modulus install %i
 TimeoutStopSec=infinity
 
 [Install]

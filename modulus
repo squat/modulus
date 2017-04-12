@@ -78,11 +78,13 @@ compile() {
     upload "$DRIVER_VERSION"
 }
 
-exprt() {
+install() {
     local DRIVER_VERSION=$1
     pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
     mkdir -p /opt/"$DRIVER_VERSION"
     cp -r ./out/* /opt/"$DRIVER_VERSION"/
+    echo /opt/"$DRIVER_VERSION"/lib > /etc/ld.so.conf.d/"$DRIVER_VERSION".conf
+    ldconfig 2> /dev/null
 }
 
 upload() {
@@ -136,7 +138,7 @@ usage() {
     printf "The commands are:\n\n"
     printf "\t compile <module> \tbuild the <module> kernel module\n"
     printf "\t download <module>\tdownload the compiled kernel module and assets for <module> from S3 to /home/core/.modulus/<module>\n"
-    printf "\t export <module>  \tinstall the <module> kernel module in the expected location\n"
+    printf "\t install <module> \tinstall the <module> kernel module in the expected location and install all libraries\n"
     printf "\t status <module>  \tcheck if an up-to-date version of <module> is installed\n"
     printf "\t upload <module>  \tupload the compiled kernel module and assets for <module> to s3\n"
     printf "\n"
@@ -147,8 +149,8 @@ case $1 in
         compile "$2";;
     download)
         download "$2";;
-    export)
-        exprt "$2";;
+    install)
+        install "$2";;
     status)
         check_status "$2" && exit 0 || exit 1;;
     upload)
