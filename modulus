@@ -1,44 +1,158 @@
 #!/bin/bash
 
-GROUP=$1
-COREOS_RELEASE_BOARD=$2
-COREOS_RELEASE_VERSION=$3
-DRIVER_VERSION=$4
-CONTAINER_URL=http://$GROUP.release.core-os.net/$COREOS_RELEASE_BOARD/$COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
-while read -r e ; do export $e ;done < <(update_engine_client -status 2>/dev/null)
-[ "$CURRENT_OP" != "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && exit
-COREOS_RELEASE_VERSION=$NEW_VERSION
+FORCE=false
+UPLOAD=false
 
-echo "Compiling kernel modules for $DRIVER_VERSION, Container Linux $GROUP $COREOS_RELEASE_BOARD $COREOS_RELEASE_VERSION"
-mkdir -p /home/core/.modulus/"$DRIVER_VERSION"
-pushd /home/core/.modulus/"$DRIVER_VERSION"
-mkdir -p out
-gpg2 --recv-keys 48F9B96A2E16137F
-curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
-sudo systemd-nspawn \
-    --bind-ro=/opt/bin:/opt/bin \
-    --bind="$PWD"/out:/out \
-    --image=coreos_developer_container.bin \
-    --register=no \
-    --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
-    --setenv=COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
-    --setenv=GROUP="$GROUP" \
-    --setenv=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-    --setenv=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-    /opt/bin/"$DRIVER_VERSION"
+check_for_update() {
+    while read -r e ; do export $e ;done < <(update_engine_client -status 2>/dev/null)
+    [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && COREOS_RELEASE_VERSION=$NEW_VERSION
+}
 
-# Export modules and assets
-mkdir -p /opt/"$DRIVER_VERSION"
-cp -r ./out/* /opt/"$DRIVER_VERSION"/
-tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz ./out
-. /home/core/awsenv
-for t in ./*.tar.gz; do \
+while getopts ":g:r:b:cfu" o; do
+    case $o in
+        g)
+            GROUP=$OPTARG
+            if [ "$GROUP" != alpha ] && [ "$GROUP" != beta ] && [ "$GROUP" != stable ]; then
+                echo "Usage: $(basename "$0") [-g <alpha|beta|stable>]" 1>&2; exit 1;
+            fi
+            ;;
+        r)
+            COREOS_RELEASE_VERSION=$OPTARG;;
+        b)
+            COREOS_RELEASE_BOARD=$OPTARG;;
+        c)
+            check_for_update;;
+        f)
+            FORCE=$OPTARG;;
+        u)
+            UPLOAD=$OPTARG;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+
+check_status() {
+    local DRIVER_VERSION=$1
+    local KERNEL_VERSION=$(uname -r)
+    if [ -d /opt/"$DRIVER_VERSION"/lib/modules/"$KERNEL_VERSION" ]; then
+        echo "$DRIVER_VERSION is up to date"
+        return 0;
+    fi
+    echo "$DRIVER_VERSION is out of date" 1>&2
+    return 1;
+}
+
+compile() {
+    local DRIVER_VERSION=$1
+    [ "$FORCE" = false ] && check_status "$DRIVER_VERSION" && exit 0
+
+    local CONTAINER_URL=http://$GROUP.release.core-os.net/$COREOS_RELEASE_BOARD/$COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
+
+    echo "Compiling kernel modules for $DRIVER_VERSION, Container Linux $GROUP $COREOS_RELEASE_BOARD $COREOS_RELEASE_VERSION"
+    mkdir -p /home/core/.modulus/"$DRIVER_VERSION"
+    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
+    mkdir -p out
+    gpg2 --recv-keys 48F9B96A2E16137F
+    curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
+    sudo systemd-nspawn \
+        --bind-ro=/opt/bin:/opt/bin \
+        --bind="$PWD"/out:/out \
+        --image=coreos_developer_container.bin \
+        --register=no \
+        --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
+        --setenv=COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
+        --setenv=GROUP="$GROUP" \
+        --setenv=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+        --setenv=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+        /opt/bin/"$DRIVER_VERSION"
+
+    [ "$UPLOAD" = false ] && exit 0
+    upload "$DRIVER_VERSION"
+}
+
+exprt() {
+    local DRIVER_VERSION=$1
+    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
+    mkdir -p /opt/"$DRIVER_VERSION"
+    cp -r ./out/* /opt/"$DRIVER_VERSION"/
+}
+
+upload() {
+    local DRIVER_VERSION=$1
+    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
+    tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz ./out
+    . /home/core/awsenv
+    for t in ./*.tar.gz; do \
+        rkt run \
+            --net=host \
+            --dns=host \
+            --trust-keys-from-https quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
+            --volume=out,kind=host,source="$PWD"/"$t" \
+            --mount=volume=out,target=/"$t" \
+            --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --exec=/usr/bin/aws -- s3 cp /"$t" "$S3_BUCKET" ; done
+}
+
+download() {
+    local DRIVER_VERSION=$1
+    [ "$FORCE" = false ] && check_status "$DRIVER_VERSION" && exit 0
+
+    mkdir -p /home/core/.modulus/"$DRIVER_VERSION"
+    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
+    local t="$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz
+    . /home/core/awsenv
     rkt run \
         --net=host \
         --dns=host \
         --trust-keys-from-https quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
-        --volume=out,kind=host,source="$PWD"/"$t" \
-        --mount=volume=out,target=/"$t" \
+        --volume=out,kind=host,source="$PWD" \
+        --mount=volume=out,target=/out \
         --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
         --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-        --exec=/usr/bin/aws -- s3 cp /"$t" "$S3_BUCKET" ; done
+        --exec=/usr/bin/aws -- s3 cp "$S3_BUCKET""$t" /out/"$t"
+    tar -xvf "$t"
+}
+
+usage() {
+    printf "%s is a tool for automatically compiling kernel modules.\n\n" "$(basename "$0")"
+    printf "Usage:\n\n \t %s [options] command [arguments]\n\n" "$(basename "$0")"
+    printf " The options are:\n\n"
+    printf "\t -b BOARD         \tContainer Linux release board, e.g. amd64-usr\n"
+    printf "\t -c               \tcheck for Container Linux release version using update engine\n"
+    printf "\t -f               \tforce install even if modules are up to date\n"
+    printf "\t -g GROUP         \tContainer Linux release group, i.e. alpha, beta, or stable\n"
+    printf "\t -r RELEASE       \tContainer Linux release version, e.g. 1353.4.0\n"
+    printf "\t -u               \tupload the driver to S3 after compiling\n"
+    printf "\n"
+    printf "The commands are:\n\n"
+    printf "\t compile <module> \tbuild the <module> kernel module\n"
+    printf "\t download <module>\tdownload the compiled kernel module and assets for <module> from S3 to /home/core/.modulus/<module>\n"
+    printf "\t export <module>  \tinstall the <module> kernel module in the expected location\n"
+    printf "\t status <module>  \tcheck if an up-to-date version of <module> is installed\n"
+    printf "\t upload <module>  \tupload the compiled kernel module and assets for <module> to s3\n"
+    printf "\n"
+}
+
+case $1 in
+    compile)
+        compile "$2";;
+    download)
+        download "$2";;
+    export)
+        exprt "$2";;
+    status)
+        check_status "$2" && exit 0 || exit 1;;
+    upload)
+        upload "$2";;
+    *)
+        usage;;
+esac
