@@ -17,19 +17,10 @@ sudo cp modulus@.service /etc/systemd/system/modulus@.service
 ```
 
 ## Compiling Nvidia Kernel Modules
-Copy the `nvidia/compile` script to `/opt/bin` with the version of Nvidia that you want to compile as the filename:
-```sh
-sudo cp nvidia/compile /opt/bin/378.13
-```
-
-Enable the modulus service:
-```sh
-sudo systemctl enable modulus@378.13
-sudo systemctl start modulus@378.13
-```
+Modulus makes it easy to automatically compile kernel modules for nvidia GPUs. Checkout the [nvidia README](https://github.com/squat/modulus/blob/master/nvidia/README.md) for detailed instructions.
 
 ## Distribution
-After compiliation, modulus places your modules in `/home/core/.modulus/<driver-version>/out`. Modulus also automatically tries to upload your compiled kernel modules to S3 so that you can compile the drivers once and reuse them across multiple machines. To enable this functionality, create a file named `awsenv` in `/home/core` that looks like:
+After compiliation, Modulus installs all the compiled assets and places a copy in `/home/core/.modulus/<driver-version>/out`. Modulus also automatically tries to upload your compiled kernel modules to S3 so that you can compile the drivers once and reuse them across multiple machines. To enable this functionality, create a file named `awsenv` in `/home/core` that looks like:
 
 ```
 AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
