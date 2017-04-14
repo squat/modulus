@@ -105,6 +105,7 @@ bin_to_tar() {
     truncate -s $(((END-4096+1)*512)) "$IN"
     local DIR=$(mktemp -d)
     mount "$IN" "$DIR"
+    rm "$IN"
     pushd "$DIR" > /dev/null
     tar -c . | docker import - "$OUT"
     popd > /dev/null
