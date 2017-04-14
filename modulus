@@ -1,5 +1,6 @@
 #!/bin/bash
 
+DOCKER=false
 FORCE=false
 UPLOAD=false
 
@@ -8,7 +9,7 @@ check_for_update() {
     [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && COREOS_RELEASE_VERSION=$NEW_VERSION
 }
 
-while getopts ":g:r:b:cfu" o; do
+while getopts ":g:r:b:cfuD" o; do
     case $o in
         g)
             GROUP=$OPTARG
@@ -22,6 +23,8 @@ while getopts ":g:r:b:cfu" o; do
             COREOS_RELEASE_BOARD=$OPTARG;;
         c)
             check_for_update;;
+        D)
+            DOCKER=$OPTARG;;
         f)
             FORCE=$OPTARG;;
         u)
@@ -62,20 +65,50 @@ compile() {
     mkdir -p out
     gpg2 --recv-keys 48F9B96A2E16137F
     curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
-    sudo systemd-nspawn \
-        --bind-ro=/opt/bin:/opt/bin \
-        --bind="$PWD"/out:/out \
-        --image=coreos_developer_container.bin \
-        --register=no \
-        --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
-        --setenv=COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
-        --setenv=GROUP="$GROUP" \
-        --setenv=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-        --setenv=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-        /opt/bin/"$DRIVER_VERSION"
+
+    if [ "$DOCKER" = false ] ; then
+        sudo systemd-nspawn \
+            --bind-ro=/opt/bin:/opt/bin \
+            --bind="$PWD"/out:/out \
+            --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
+            --setenv=COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
+            --setenv=GROUP="$GROUP" \
+            --image=coreos_developer_container.bin \
+            --register=no \
+            /opt/bin/"$DRIVER_VERSION"
+    else
+        bin_to_tar coreos_developer_container.bin coreos_developer_container
+        docker run --rm \
+            -v /opt/bin:/opt/bin:ro \
+            -v "$PWD"/out:/out \
+            -e DRIVER_VERSION="$DRIVER_VERSION" \
+            -e COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
+            -e GROUP="$GROUP" \
+            coreos_developer_container /opt/bin/"$DRIVER_VERSION"
+    fi
 
     [ "$UPLOAD" = false ] && exit 0
     upload "$DRIVER_VERSION"
+}
+
+bin_to_tar() {
+    if [ -z "$1" ] || [ -z "$2" ] ; then
+        echo "err: no binary or no tar specified"
+        return 1
+    fi
+
+    local IN=$1
+    local OUT=$2
+    local START=$(gdisk -l "$IN" | grep ROOT | awk '{print $2}')
+    local END=$(gdisk -l "$IN" | grep ROOT | awk '{print $3}')
+    dd if="$IN" of="$IN" bs=512 skip="$START" conv=notrunc
+    truncate -s $(((END-4096+1)*512)) "$IN"
+    local DIR=$(mktemp -d)
+    mount "$IN" "$DIR"
+    pushd "$DIR" > /dev/null
+    tar -c . | docker import - "$OUT"
+    popd > /dev/null
+    umount "$DIR"
 }
 
 install() {
@@ -130,6 +163,7 @@ usage() {
     printf " The options are:\n\n"
     printf "\t -b BOARD         \tContainer Linux release board, e.g. amd64-usr\n"
     printf "\t -c               \tcheck for Container Linux release version using update engine\n"
+    printf "\t -D               \trun all containers with Docker\n"
     printf "\t -f               \tforce install even if modules are up to date\n"
     printf "\t -g GROUP         \tContainer Linux release group, i.e. alpha, beta, or stable\n"
     printf "\t -r RELEASE       \tContainer Linux release version, e.g. 1353.4.0\n"
