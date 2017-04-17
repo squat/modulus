@@ -1,16 +1,27 @@
 #!/bin/bash
 
-DOCKER=false
-FORCE=false
-UPLOAD=false
+MODULUS_DOCKER=${MODULUS_DOCKER:-false}
+MODULUS_FORCE=${MODULUS_FORCE:-false}
+MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
+MODULUS_DIRECTORY=${MODULUS_DIRECTORY:-/opt/modulus}
 
 check_for_update() {
     while read -r e ; do export $e ;done < <(update_engine_client -status 2>/dev/null)
     [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && COREOS_RELEASE_VERSION=$NEW_VERSION
 }
 
-while getopts ":g:r:b:cfuD" o; do
+while getopts ":b:cd:Dfg:r:u" o; do
     case $o in
+        b)
+            COREOS_RELEASE_BOARD=$OPTARG;;
+        c)
+            check_for_update;;
+        d)
+            MODULUS_DIRECTORY=$OPTARG;;
+        D)
+            MODULUS_DOCKER=$OPTARG;;
+        f)
+            MODULUS_FORCE=$OPTARG;;
         g)
             GROUP=$OPTARG
             if [ "$GROUP" != alpha ] && [ "$GROUP" != beta ] && [ "$GROUP" != stable ]; then
@@ -19,16 +30,8 @@ while getopts ":g:r:b:cfuD" o; do
             ;;
         r)
             COREOS_RELEASE_VERSION=$OPTARG;;
-        b)
-            COREOS_RELEASE_BOARD=$OPTARG;;
-        c)
-            check_for_update;;
-        D)
-            DOCKER=$OPTARG;;
-        f)
-            FORCE=$OPTARG;;
         u)
-            UPLOAD=$OPTARG;;
+            MODULUS_UPLOAD=$OPTARG;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 1
@@ -55,21 +58,20 @@ check_status() {
 
 compile() {
     local DRIVER_VERSION=$1
-    [ "$FORCE" = false ] && check_status "$DRIVER_VERSION" && exit 0
+    [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_VERSION" && exit 0
 
     local CONTAINER_URL=http://$GROUP.release.core-os.net/$COREOS_RELEASE_BOARD/$COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
 
     echo "Compiling kernel modules for $DRIVER_VERSION, Container Linux $GROUP $COREOS_RELEASE_BOARD $COREOS_RELEASE_VERSION"
-    mkdir -p /home/core/.modulus/"$DRIVER_VERSION"
-    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
-    mkdir -p out
+    mkdir -p "$MODULUS_DIRECTORY"/archive/"$DRIVER_VERSION"
+    pushd "$MODULUS_DIRECTORY"/archive/"$DRIVER_VERSION" > /dev/null
     gpg2 --recv-keys 48F9B96A2E16137F
     curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
 
-    if [ "$DOCKER" = false ] ; then
+    if [ "$MODULUS_DOCKER" = false ] ; then
         sudo systemd-nspawn \
             --bind-ro=/opt/bin:/opt/bin \
-            --bind="$PWD"/out:/out \
+            --bind="$PWD":/out \
             --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
             --setenv=COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
             --setenv=GROUP="$GROUP" \
@@ -80,14 +82,14 @@ compile() {
         bin_to_tar coreos_developer_container.bin coreos_developer_container
         docker run --rm \
             -v /opt/bin:/opt/bin:ro \
-            -v "$PWD"/out:/out \
+            -v "$PWD":/out \
             -e DRIVER_VERSION="$DRIVER_VERSION" \
             -e COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
             -e GROUP="$GROUP" \
             coreos_developer_container /opt/bin/"$DRIVER_VERSION"
     fi
 
-    [ "$UPLOAD" = false ] && exit 0
+    [ "$MODULUS_UPLOAD" = false ] && exit 0
     upload "$DRIVER_VERSION"
 }
 
@@ -114,17 +116,18 @@ bin_to_tar() {
 
 install() {
     local DRIVER_VERSION=$1
-    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
+    pushd "$MODULUS_DIRECTORY"/archive/"$DRIVER_VERSION" > /dev/null
     mkdir -p /opt/"$DRIVER_VERSION"
-    cp -r ./out/* /opt/"$DRIVER_VERSION"/
+    cp -r ./bin /opt/"$DRIVER_VERSION"/
+    cp -r ./lib /opt/"$DRIVER_VERSION"/
     echo /opt/"$DRIVER_VERSION"/lib > /etc/ld.so.conf.d/"$DRIVER_VERSION".conf
     ldconfig 2> /dev/null
 }
 
 upload() {
     local DRIVER_VERSION=$1
-    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
-    tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz ./out
+    pushd "$MODULUS_DIRECTORY"/archive/"$DRIVER_VERSION" > /dev/null
+    tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
     . /home/core/awsenv
     for t in ./*.tar.gz; do \
         rkt run \
@@ -140,10 +143,10 @@ upload() {
 
 download() {
     local DRIVER_VERSION=$1
-    [ "$FORCE" = false ] && check_status "$DRIVER_VERSION" && exit 0
+    [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_VERSION" && exit 0
 
-    mkdir -p /home/core/.modulus/"$DRIVER_VERSION"
-    pushd /home/core/.modulus/"$DRIVER_VERSION" > /dev/null
+    mkdir -p "$MODULUS_DIRECTORY"/archive/"$DRIVER_VERSION"
+    pushd "$MODULUS_DIRECTORY"/archive/"$DRIVER_VERSION" > /dev/null
     local t="$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_VERSION".tar.gz
     . /home/core/awsenv
     rkt run \
@@ -164,6 +167,7 @@ usage() {
     printf " The options are:\n\n"
     printf "\t -b BOARD         \tContainer Linux release board, e.g. amd64-usr\n"
     printf "\t -c               \tcheck for Container Linux release version using update engine\n"
+    printf "\t -d               \tdirectory in which to archive all assets, e.g. /opt/modulus\n"
     printf "\t -D               \trun all containers with Docker\n"
     printf "\t -f               \tforce install even if modules are up to date\n"
     printf "\t -g GROUP         \tContainer Linux release group, i.e. alpha, beta, or stable\n"
@@ -172,7 +176,7 @@ usage() {
     printf "\n"
     printf "The commands are:\n\n"
     printf "\t compile <module> \tbuild the <module> kernel module\n"
-    printf "\t download <module>\tdownload the compiled kernel module and assets for <module> from S3 to /home/core/.modulus/<module>\n"
+    printf "\t download <module>\tdownload the compiled kernel module and assets for <module> from S3 to %s/archive/<module>\n" "$MODULUS_DIRECTORY"
     printf "\t install <module> \tinstall the <module> kernel module in the expected location and install all libraries\n"
     printf "\t status <module>  \tcheck if an up-to-date version of <module> is installed\n"
     printf "\t upload <module>  \tupload the compiled kernel module and assets for <module> to s3\n"
