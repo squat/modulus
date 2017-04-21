@@ -15,7 +15,7 @@ First, make sure you have the [Modulus code available](https://github.com/squat/
 ## Getting Started
 Install and start the `create-devices` service with the instance name set to the version of nvidia you would like to compile, e.g. 378.13:
 ```sh
-sudo cp create-devices@.service /etc/systemd/system/create-devices@.service
+sudo cp /opt/modulus/nvidia/create-devices@.service /etc/systemd/system/create-devices@.service
 sudo systemctl enable create-devices@378.13
 sudo systemctl start create-devices@378.13
 ```

@@ -12,10 +12,8 @@ Compiling drivers on Container Linux is typically non-trivial because the OS shi
 
 ## Installation
 ```sh
-git clone https://github.com/squat/modulus.git && cd modulus
-sudo mkdir -p /opt/bin
-sudo cp modulus /opt/bin/
-sudo cp modulus@.service /etc/systemd/system/modulus@.service
+sudo git clone https://github.com/squat/modulus.git /opt/modulus
+sudo cp /opt/modulus/modulus@.service /etc/systemd/system/modulus@.service
 ```
 
 ## Compiling Nvidia Kernel Modules
