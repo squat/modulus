@@ -73,7 +73,7 @@ compile() {
     echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
     mkdir -p "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION"
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-    gpg2 --recv-keys 48F9B96A2E16137F
+    gpg2 --keyserver pgp.mit.edu --recv-keys 50E0885593D2DCB4
     curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
 
     if [ "$MODULUS_DOCKER" = false ] ; then
