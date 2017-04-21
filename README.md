@@ -25,5 +25,5 @@ After compiliation, Modulus installs all the compiled assets and places a copy i
 ```
 AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
 AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key>
-S3_BUCKET=s3://your.s3/bucket-name/
+MODULUS_S3_BUCKET=s3://your.s3/bucket-name/
 ```

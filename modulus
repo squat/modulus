@@ -1,19 +1,25 @@
 #!/bin/bash
 
+MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
+MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
-MODULUS_FORCE=${MODULUS_FORCE:-false}
-MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
 MODULUS_DIR=${MODULUS_DIR:-/opt/modulus}
+MODULUS_FORCE=${MODULUS_FORCE:-false}
+MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
+MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
+MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
 
 check_for_update() {
     while read -r e ; do export $e ;done < <(update_engine_client -status 2>/dev/null)
-    [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && COREOS_RELEASE_VERSION=$NEW_VERSION
+    [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && MODULUS_COREOS_RELEASE_VERSION=$NEW_VERSION
 }
 
-while getopts ":b:cd:Dfg:r:u" o; do
+while getopts ":b:B:cd:Dfg:r:u" o; do
     case $o in
         b)
-            COREOS_RELEASE_BOARD=$OPTARG;;
+            MODULUS_COREOS_RELEASE_BOARD=$OPTARG;;
+        B)
+            MODULUS_S3_BUCKET=$OPTARG;;
         c)
             check_for_update;;
         d)
@@ -23,15 +29,15 @@ while getopts ":b:cd:Dfg:r:u" o; do
         f)
             MODULUS_FORCE=true;;
         g)
-            GROUP=$OPTARG
-            if [ "$GROUP" != alpha ] && [ "$GROUP" != beta ] && [ "$GROUP" != stable ]; then
+            MODULUS_GROUP=$OPTARG
+            if [ "$MODULUS_GROUP" != alpha ] && [ "$MODULUS_GROUP" != beta ] && [ "$MODULUS_GROUP" != stable ]; then
                 echo "Usage: $(basename "$0") [-g <alpha|beta|stable>]" 1>&2; exit 1;
             fi
             ;;
         r)
-            COREOS_RELEASE_VERSION=$OPTARG;;
+            MODULUS_COREOS_RELEASE_VERSION=$OPTARG;;
         u)
-            MODULUS_UPLOAD=$OPTARG;;
+            MODULUS_UPLOAD=true;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 1
@@ -62,9 +68,9 @@ compile() {
     local DRIVER_VERSION=$2
     [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_NAME" "$DRIVER_VERSION" && exit 0
 
-    local CONTAINER_URL=http://$GROUP.release.core-os.net/$COREOS_RELEASE_BOARD/$COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
+    local CONTAINER_URL=http://$MODULUS_GROUP.release.core-os.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
 
-    echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $GROUP $COREOS_RELEASE_BOARD $COREOS_RELEASE_VERSION"
+    echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
     mkdir -p "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION"
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
     gpg2 --recv-keys 48F9B96A2E16137F
@@ -75,8 +81,8 @@ compile() {
             --bind-ro="$MODULUS_DIR":/opt/modulus \
             --bind="$PWD":/out \
             --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
-            --setenv=COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
-            --setenv=GROUP="$GROUP" \
+            --setenv=MODULUS_COREOS_RELEASE_VERSION="$MODULUS_COREOS_RELEASE_VERSION" \
+            --setenv=MODULUS_GROUP="$MODULUS_GROUP" \
             --image=coreos_developer_container.bin \
             --register=no \
             /opt/modulus/"$DRIVER_NAME"/compile
@@ -86,8 +92,8 @@ compile() {
             -v "$MODULUS_DIR":/opt/modulus:ro \
             -v "$PWD":/out \
             -e DRIVER_VERSION="$DRIVER_VERSION" \
-            -e COREOS_RELEASE_VERSION="$COREOS_RELEASE_VERSION" \
-            -e GROUP="$GROUP" \
+            -e MODULUS_COREOS_RELEASE_VERSION="$MODULUS_COREOS_RELEASE_VERSION" \
+            -e MODULUS_GROUP="$MODULUS_GROUP" \
             coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
     fi
 
@@ -136,7 +142,7 @@ upload() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-    tar -cvzf "$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
+    tar -cvzf "$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
     . /home/core/awsenv
     for t in ./*.tar.gz; do \
         rkt run \
@@ -147,7 +153,7 @@ upload() {
             --mount=volume=out,target=/"$t" \
             --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-            --exec=/usr/bin/aws -- s3 cp /"$t" "$S3_BUCKET" ; done
+            --exec=/usr/bin/aws -- s3 cp /"$t" "$MODULUS_S3_BUCKET" ; done
 }
 
 download() {
@@ -157,7 +163,7 @@ download() {
 
     mkdir -p "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION"
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-    local t="$COREOS_RELEASE_VERSION"-"$GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
+    local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
     . /home/core/awsenv
     rkt run \
         --net=host \
@@ -167,7 +173,7 @@ download() {
         --mount=volume=out,target=/out \
         --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
         --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-        --exec=/usr/bin/aws -- s3 cp "$S3_BUCKET""$t" /out/"$t"
+        --exec=/usr/bin/aws -- s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
     tar -xvf "$t"
 }
 

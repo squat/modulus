@@ -7,16 +7,17 @@ After=network-online.target update-engine.service
 EnvironmentFile=/usr/share/coreos/release
 EnvironmentFile=/usr/share/coreos/update.conf
 EnvironmentFile=/etc/coreos/update.conf
+Environment=MODULUS_DIR=/opt/modulus
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=-/bin/bash -c "/opt/modulus/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download $(echo %i | tr '-' ' ')"
-ExecStart=-/bin/bash -c "/opt/modulus/modulus -fg ${GROUP} -r ${COREOS_RELEASE_VERSION} install $(echo %i | tr '-' ' ')"
-ExecStart=/bin/bash -c "/opt/modulus/modulus -u -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile $(echo %i | tr '-' ' ')"
-ExecStart=/bin/bash -c "/opt/modulus/modulus -f install $(echo %i | tr '-' ' ')"
-ExecStop=-/bin/bash -c "/opt/modulus/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download $(echo %i | tr '-' ' ')"
-ExecStop=-/bin/bash -c "/opt/modulus/modulus -fc -g ${GROUP} -r ${COREOS_RELEASE_VERSION} install $(echo %i | tr '-' ' ')"
-ExecStop=/bin/bash -c "/opt/modulus/modulus -cu -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile $(echo %i | tr '-' ' ')"
-ExecStop=/bin/bash -c "/opt/modulus/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus download $(echo %i | tr '-' ' ')"
+ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus -u compile $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -c download $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -cf install $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus -cu compile $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus -f install $(echo %i | tr '-' ' ')"
 TimeoutStopSec=infinity
 
 [Install]
