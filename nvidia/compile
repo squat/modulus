@@ -1,6 +1,8 @@
 #!/bin/bash
+set -e
 
 echo "Preparing environment"
+. /usr/share/coreos/release
 /usr/bin/emerge-gitclone
 git -C /var/lib/portage/coreos-overlay checkout "build-${COREOS_RELEASE_VERSION%%.*}"
 emerge -v coreos-sources
@@ -17,7 +19,8 @@ if echo "$KERNEL_VERSION" | grep -q "^4.10" ; then
   curl -O https://gist.githubusercontent.com/squat/40da8fd85d6d3acb427ba58372d2c4b2/raw/de4e3bdee5a74347bda7dced86408278573d0119/kernel_4.10.patch
   patch -p1 < kernel_4.10.patch
 fi
-./nvidia-installer -s -n --kernel-source-path=/usr/src/linux --no-check-for-alternate-installs --no-opengl-files --kernel-install-path="$PWD" --log-file-name="$PWD"/nvidia-installer.log
+./nvidia-installer -s -n --kernel-source-path=/usr/src/linux --no-check-for-alternate-installs --no-opengl-files --kernel-install-path="$PWD" --log-file-name="$PWD"/nvidia-installer.log || true
+if [ -e kernel/nvidia.ko ] ; then echo "Successfully compiled NVIDIA modules" ; else echo "Failed to compile NVIDIA modules" && exit 1 ; fi
 
 echo "Archiving assets"
 mkdir -p /out/lib /out/lib/modules/"$KERNEL_VERSION" /out/bin

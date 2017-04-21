@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
 MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
@@ -11,7 +12,7 @@ MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
 
 check_for_update() {
     while read -r e ; do export $e ;done < <(update_engine_client -status 2>/dev/null)
-    [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && MODULUS_COREOS_RELEASE_VERSION=$NEW_VERSION
+    [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && MODULUS_COREOS_RELEASE_VERSION=$NEW_VERSION || true
 }
 
 while getopts ":b:B:cd:Dfg:r:u" o; do
@@ -50,7 +51,6 @@ while getopts ":b:B:cd:Dfg:r:u" o; do
 done
 shift $((OPTIND-1))
 
-
 check_status() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
@@ -81,8 +81,6 @@ compile() {
             --bind-ro="$MODULUS_DIR":/opt/modulus \
             --bind="$PWD":/out \
             --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
-            --setenv=MODULUS_COREOS_RELEASE_VERSION="$MODULUS_COREOS_RELEASE_VERSION" \
-            --setenv=MODULUS_GROUP="$MODULUS_GROUP" \
             --image=coreos_developer_container.bin \
             --register=no \
             /opt/modulus/"$DRIVER_NAME"/compile
@@ -92,8 +90,6 @@ compile() {
             -v "$MODULUS_DIR":/opt/modulus:ro \
             -v "$PWD":/out \
             -e DRIVER_VERSION="$DRIVER_VERSION" \
-            -e MODULUS_COREOS_RELEASE_VERSION="$MODULUS_COREOS_RELEASE_VERSION" \
-            -e MODULUS_GROUP="$MODULUS_GROUP" \
             coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
     fi
 
@@ -142,7 +138,7 @@ upload() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-    tar -cvzf "$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
+    tar -czf "$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
     . /home/core/awsenv
     for t in ./*.tar.gz; do \
         rkt run \
@@ -174,7 +170,7 @@ download() {
         --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
         --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
         --exec=/usr/bin/aws -- s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
-    tar -xvf "$t"
+    tar -xf "$t"
 }
 
 usage() {
