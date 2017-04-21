@@ -1,14 +1,14 @@
 [Unit]
 Description=load kernel modules and create nvidia devices
-After=modulus@%i.service
-Requires=modulus@%i.service
+After=modulus@nvidia-%i.service
+Requires=modulus@nvidia-%i.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/sbin/depmod -b /opt/%i
-ExecStart=/usr/sbin/modprobe -d /opt/%i nvidia
-ExecStart=/usr/sbin/modprobe -d /opt/%i nvidia-uvm
+ExecStart=/usr/sbin/depmod -b /opt/nvidia/%i
+ExecStart=/usr/sbin/modprobe -d /opt/nvidia/%i nvidia
+ExecStart=/usr/sbin/modprobe -d /opt/nvidia/%i nvidia-uvm
 ExecStart=/bin/bash -c 'NVDEVS=`lspci | grep -i NVIDIA` && \
 	N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l` && \
 	NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l` && \

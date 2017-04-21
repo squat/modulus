@@ -9,14 +9,14 @@ EnvironmentFile=/usr/share/coreos/update.conf
 EnvironmentFile=/etc/coreos/update.conf
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=-/opt/bin/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download %i
-ExecStart=-/opt/bin/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} install %i
-ExecStart=/opt/bin/modulus -u -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile %i
-ExecStart=/opt/bin/modulus install %i
-ExecStop=-/opt/bin/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download %i
-ExecStop=-/opt/bin/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} install %i
-ExecStop=/opt/bin/modulus -cu -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile %i
-ExecStop=/opt/bin/modulus install %i
+ExecStart=-/bin/bash -c "/opt/modulus/modulus -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download $(echo %i | tr '-' ' ')"
+ExecStart=-/bin/bash -c "/opt/modulus/modulus -fg ${GROUP} -r ${COREOS_RELEASE_VERSION} install $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "/opt/modulus/modulus -u -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "/opt/modulus/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "/opt/modulus/modulus -c -g ${GROUP} -r ${COREOS_RELEASE_VERSION} download $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "/opt/modulus/modulus -fc -g ${GROUP} -r ${COREOS_RELEASE_VERSION} install $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "/opt/modulus/modulus -cu -g ${GROUP} -b ${COREOS_RELEASE_BOARD} -r ${COREOS_RELEASE_VERSION} compile $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "/opt/modulus/modulus -f install $(echo %i | tr '-' ' ')"
 TimeoutStopSec=infinity
 
 [Install]
