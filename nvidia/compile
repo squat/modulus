@@ -8,6 +8,7 @@ git -C /var/lib/portage/coreos-overlay checkout "build-${COREOS_RELEASE_VERSION%
 emerge -v coreos-sources
 cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
 KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
+make -C /usr/src/linux olddefconfig
 make -C /usr/src/linux modules_prepare
 
 echo "Compiling NVIDIA modules"
