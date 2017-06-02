@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
 
+MODULUS_DIR=${MODULUS_DIR:-/opt/modulus}
+[ -e $MODULUS_DIR/.env ] && source $MODULUS_DIR/.env
 MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
 MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
-MODULUS_DIR=${MODULUS_DIR:-/opt/modulus}
 MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
 MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
@@ -138,18 +139,27 @@ upload() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-    tar -czf "$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
-    . /home/core/awsenv
-    for t in ./*.tar.gz; do \
+    local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
+    tar -czf "$t" --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
+    if [ "$MODULUS_DOCKER" = false ] ; then
         rkt run \
             --net=host \
             --dns=host \
             --trust-keys-from-https quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
-            --volume=out,kind=host,source="$PWD"/"$t" \
+            --volume=out,kind=host,source="$PWD"/"$t",readOnly=true \
             --mount=volume=out,target=/"$t" \
             --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-            --exec=/usr/bin/aws -- s3 cp /"$t" "$MODULUS_S3_BUCKET" ; done
+            --exec=/usr/bin/aws -- s3 cp /"$t" "$MODULUS_S3_BUCKET"
+    else
+        docker run --rm \
+            -v "$PWD"/"$t":/"$t" \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --entrypoint=/usr/bin/aws \
+            quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
+            s3 cp /"$t" "$MODULUS_S3_BUCKET"
+    fi
 }
 
 download() {
@@ -160,16 +170,26 @@ download() {
     mkdir -p "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION"
     pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
-    . /home/core/awsenv
-    rkt run \
-        --net=host \
-        --dns=host \
-        --trust-keys-from-https quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
-        --volume=out,kind=host,source="$PWD" \
-        --mount=volume=out,target=/out \
-        --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-        --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-        --exec=/usr/bin/aws -- s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
+    if [ "$MODULUS_DOCKER" = false ] ; then
+        rkt run \
+            --net=host \
+            --dns=host \
+            --trust-keys-from-https quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
+            --volume=out,kind=host,source="$PWD" \
+            --mount=volume=out,target=/out \
+            --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --exec=/usr/bin/aws -- s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
+    else
+        docker run --rm \
+            -v "$PWD":/out \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --entrypoint=/usr/bin/aws \
+            quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
+            s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
+    fi
+
     tar -xf "$t"
 }
 
