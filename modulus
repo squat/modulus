@@ -124,12 +124,16 @@ install() {
     local DRIVER_VERSION=$2
     if [ "$MODULUS_FORCE" = true ] ; then
         rm -rf /opt/"$DRIVER_NAME"
-    elif [ -e /opt/"$DRIVER_NAME" ] ; then
-        echo "/opt/$DRIVER_NAME exists; use -f to force install"
-        exit 1
+    fi
+    if [ -e /opt/"$DRIVER_NAME" ] ; then
+        if [ ! "$MODULUS_DIR"/archive/"$DRIVER_NAME" -ef /opt/"$DRIVER_NAME" ] ; then
+            echo "/opt/$DRIVER_NAME exists; use -f to force install"
+            exit 1
+        fi
+    else
+        ln -s "$MODULUS_DIR"/archive/"$DRIVER_NAME" /opt/"$DRIVER_NAME"
     fi
 
-    ln -s "$MODULUS_DIR"/archive/"$DRIVER_NAME" /opt/"$DRIVER_NAME"
     mkdir -p /etc/ld.so.conf.d
     echo /opt/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > /etc/ld.so.conf.d/"$DRIVER_NAME"-"$DRIVER_VERSION".conf
     ldconfig 2> /dev/null

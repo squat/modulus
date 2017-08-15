@@ -11,13 +11,13 @@ Environment=MODULUS_DIR=/opt/modulus
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus download $(echo %i | tr '-' ' ')"
-ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus install $(echo %i | tr '-' ' ')"
 ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus -u compile $(echo %i | tr '-' ' ')"
-ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus install $(echo %i | tr '-' ' ')"
 ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -c download $(echo %i | tr '-' ' ')"
-ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -cf install $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -c install $(echo %i | tr '-' ' ')"
 ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus -cu compile $(echo %i | tr '-' ' ')"
-ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus -f install $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus install $(echo %i | tr '-' ' ')"
 TimeoutStopSec=infinity
 
 [Install]
