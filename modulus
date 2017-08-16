@@ -2,7 +2,8 @@
 set -e
 
 MODULUS_DIR=${MODULUS_DIR:-/opt/modulus}
-[ -e $MODULUS_DIR/.env ] && source $MODULUS_DIR/.env
+# shellcheck disable=SC1090
+[ -e "$MODULUS_DIR"/.env ] && source "$MODULUS_DIR"/.env
 MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
 MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
@@ -12,8 +13,11 @@ MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
 MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
 
 check_for_update() {
-    while read -r e ; do export $e ;done < <(update_engine_client -status 2>/dev/null)
-    [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] && MODULUS_COREOS_RELEASE_VERSION=$NEW_VERSION || true
+    # shellcheck disable=SC2163
+    while read -r e ; do export "$e" ;done < <(update_engine_client -status 2>/dev/null)
+    if [ "$CURRENT_OP" == "UPDATE_STATUS_UPDATED_NEED_REBOOT" ] ; then
+        MODULUS_COREOS_RELEASE_VERSION=$NEW_VERSION || true
+    fi
 }
 
 while getopts ":b:B:cd:Dfg:r:u" o; do
@@ -32,7 +36,7 @@ while getopts ":b:B:cd:Dfg:r:u" o; do
             MODULUS_FORCE=true;;
         g)
             MODULUS_GROUP=$OPTARG
-            if [ "$MODULUS_GROUP" != alpha ] && [ "$MODULUS_GROUP" != beta ] && [ "$MODULUS_GROUP" != stable ]; then
+            if [ "$MODULUS_GROUP" != alpha ] && [ "$MODULUS_GROUP" != beta ] && [ "$MODULUS_GROUP" != stable ] ; then
                 echo "Usage: $(basename "$0") [-g <alpha|beta|stable>]" 1>&2; exit 1;
             fi
             ;;
@@ -55,6 +59,7 @@ shift $((OPTIND-1))
 check_status() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
+    # shellcheck disable=SC2155
     local KERNEL_VERSION=$(uname -r)
     if [ -d /opt/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib/modules/"$KERNEL_VERSION" ]; then
         echo "$DRIVER_NAME $DRIVER_VERSION is up to date"
@@ -106,10 +111,13 @@ bin_to_tar() {
 
     local IN=$1
     local OUT=$2
+    # shellcheck disable=SC2155
     local START=$(gdisk -l "$IN" | grep ROOT | awk '{print $2}')
+    # shellcheck disable=SC2155
     local END=$(gdisk -l "$IN" | grep ROOT | awk '{print $3}')
     dd if="$IN" of="$IN" bs=512 skip="$START" conv=notrunc
     truncate -s $(((END-4096+1)*512)) "$IN"
+    # shellcheck disable=SC2155
     local DIR=$(mktemp -d)
     mount "$IN" "$DIR"
     rm "$IN"
