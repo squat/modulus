@@ -2,6 +2,7 @@
 set -e
 
 echo "Preparing environment"
+# shellcheck disable=SC1091
 . /usr/share/coreos/release
 /usr/bin/emerge-gitclone
 git -C /var/lib/portage/coreos-overlay checkout "build-${COREOS_RELEASE_VERSION%%.*}"
