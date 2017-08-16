@@ -142,9 +142,10 @@ install() {
 upload() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
-    pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
+    mkdir -p "$MODULUS_DIR"/archive
+    pushd "$MODULUS_DIR"/archive > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
-    tar -czf "$t" --exclude=./*.tar.gz --exclude=./coreos_developer_container* .
+    tar -czf "$t" --exclude=coreos_developer_container* "$DRIVER_NAME"/"$DRIVER_VERSION"
     if [ "$MODULUS_DOCKER" = false ] ; then
         rkt run \
             --net=host \
@@ -171,8 +172,8 @@ download() {
     local DRIVER_VERSION=$2
     [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_NAME" "$DRIVER_VERSION" && exit 0
 
-    mkdir -p "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION"
-    pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
+    mkdir -p "$MODULUS_DIR"/archive
+    pushd "$MODULUS_DIR"/archive > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
     if [ "$MODULUS_DOCKER" = false ] ; then
         rkt run \
