@@ -1,5 +1,13 @@
 .PHONY: test
 
 TEST_FILES?=modulus nvidia/compile
+SHELLCHECK_IMAGE?=koalaman/shellcheck
+
 test:
-	@shellcheck $(TEST_FILES)
+	@docker run \
+	    --rm \
+	    -u $$(id -u):$$(id -g) \
+	    -v $$(pwd):/src/$(PROJECT) \
+	    -w /src/$(PROJECT) \
+	    $(SHELLCHECK_IMAGE) \
+	    $(TEST_FILES)
