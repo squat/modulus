@@ -17,7 +17,7 @@ curl -Ls "http://us.download.nvidia.com/XFree86/Linux-x86_64/$DRIVER_VERSION/NVI
 chmod +x nvidia.run
 ./nvidia.run -x -s
 pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
-if echo "$KERNEL_VERSION" | grep -q "^4.10]" && [ "$DRIVER_VERSION" == "378.13" ]; then
+if echo "$KERNEL_VERSION" | grep -q "^4.10]" && [ "$DRIVER_VERSION" == "381.22" ]; then
   curl -O https://gist.githubusercontent.com/squat/40da8fd85d6d3acb427ba58372d2c4b2/raw/de4e3bdee5a74347bda7dced86408278573d0119/kernel_4.10.patch
   patch -p1 < kernel_4.10.patch
 fi
