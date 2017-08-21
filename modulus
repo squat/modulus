@@ -84,6 +84,7 @@ compile() {
 
     if [ "$MODULUS_DOCKER" = false ] ; then
         sudo systemd-nspawn \
+            --as-pid2 \
             --bind-ro="$MODULUS_DIR":/opt/modulus \
             --bind="$PWD":/out \
             --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
