@@ -5,7 +5,6 @@ echo "Preparing environment"
 # shellcheck disable=SC1091
 . /usr/share/coreos/release
 /usr/bin/emerge-gitclone
-git -C /var/lib/portage/coreos-overlay checkout "build-${COREOS_RELEASE_VERSION%%.*}"
 emerge -gKq --jobs 4 --load-average 4 coreos-sources
 cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
 KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
