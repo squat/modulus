@@ -5,7 +5,8 @@ echo "Preparing environment"
 # shellcheck disable=SC1091
 . /usr/share/coreos/release
 /usr/bin/emerge-gitclone
-emerge -q --jobs 4 --load-average 4 coreos-sources
+# try to use pre-built binaries and fall back to building from source
+emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
 cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
 KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
 make -C /usr/src/linux olddefconfig
