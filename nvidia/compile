@@ -5,6 +5,10 @@ echo "Preparing environment"
 # shellcheck disable=SC1091
 . /usr/share/coreos/release
 /usr/bin/emerge-gitclone
+OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep coreos-overlay | cut -d\" -f 8)
+ PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep portage-stable | cut -d\" -f 8)
+ git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
+ git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
 # try to use pre-built binaries and fall back to building from source
 emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
 cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
