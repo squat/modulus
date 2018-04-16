@@ -1,11 +1,13 @@
 #!/bin/bash
 set -e
 
-MODULUS_DIR=${MODULUS_DIR:-/opt/modulus}
+MODULUS_BIN_DIR=${MODULUS_BIN_DIR:-/opt/modulus}
+MODULUS_DIR=${MODULUS_DIR:-$MODULUS_BIN_DIR}
 # shellcheck disable=SC1090
 [ -e "$MODULUS_DIR"/.env ] && source "$MODULUS_DIR"/.env
 MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
 MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
+MODULUS_CHROOT=${MODULUS_CHROOT:-false}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
 MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
@@ -20,7 +22,7 @@ check_for_update() {
     fi
 }
 
-while getopts ":b:B:cd:Dfg:r:u" o; do
+while getopts ":b:B:cCd:Dfg:r:u" o; do
     case $o in
         b)
             MODULUS_COREOS_RELEASE_BOARD=$OPTARG;;
@@ -28,6 +30,8 @@ while getopts ":b:B:cd:Dfg:r:u" o; do
             MODULUS_S3_BUCKET=$OPTARG;;
         c)
             check_for_update;;
+        C)
+            MODULUS_CHROOT=true;;
         d)
             MODULUS_DIR=$OPTARG;;
         D)
@@ -89,26 +93,75 @@ compile() {
 
     curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
 
-    if [ "$MODULUS_DOCKER" = false ] ; then
+    if [ "$MODULUS_CHROOT" = true ] ; then
+        truncate_bin coreos_developer_container.bin
+        # shellcheck disable=SC2155
+        local DIR=$(mktemp -d)
+        mount coreos_developer_container.bin "$DIR"
+        mkdir -p "$DIR"/opt/modulus
+        mount -o bind,ro "$MODULUS_BIN_DIR" "$DIR"/opt/modulus
+        mkdir -p "$DIR"/out
+        mount --bind "$PWD" "$DIR"/out
+        run_chroot "$DIR" /opt/modulus/"$DRIVER_NAME"/compile
+        umount "$DIR"/out
+        umount "$DIR"/opt/modulus
+        umount "$DIR"
+    elif [ "$MODULUS_DOCKER" = true ] ; then
+        bin_to_tar coreos_developer_container.bin coreos_developer_container
+        docker run --rm \
+            -v "$MODULUS_BIN_DIR":/opt/modulus:ro \
+            -v "$PWD":/out \
+            -e DRIVER_VERSION="$DRIVER_VERSION" \
+            coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
+    else
         sudo systemd-nspawn \
             --as-pid2 \
-            --bind-ro="$MODULUS_DIR":/opt/modulus \
+            --bind-ro="$MODULUS_BIN_DIR":/opt/modulus \
             --bind="$PWD":/out \
             --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
             --image=coreos_developer_container.bin \
             --register=no \
             /opt/modulus/"$DRIVER_NAME"/compile
-    else
-        bin_to_tar coreos_developer_container.bin coreos_developer_container
-        docker run --rm \
-            -v "$MODULUS_DIR":/opt/modulus:ro \
-            -v "$PWD":/out \
-            -e DRIVER_VERSION="$DRIVER_VERSION" \
-            coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
     fi
+    rm -f coreos_developer_container.bin
 
     [ "$MODULUS_UPLOAD" = false ] && exit 0
     upload "$DRIVER_NAME" "$DRIVER_VERSION"
+}
+
+run_chroot() {
+    if [ -z "$1" ] || [ -z "$2" ] ; then
+        echo "err: no dir or no command specified"
+        return 1
+    fi
+
+    local DIR=$1
+    shift
+    cp --dereference /etc/resolv.conf "$DIR"/etc/resolv.conf
+    mount --bind /dev "$DIR"/dev
+    mount --bind /dev/pts "$DIR"/dev/pts
+    mount --bind /proc "$DIR"/proc
+    mount -t tmpfs tmpfs "$DIR"/tmp
+    DRIVER_VERSION="$DRIVER_VERSION" chroot "$DIR" "$@"
+    umount "$DIR"/tmp
+    umount "$DIR"/proc
+    umount "$DIR"/dev/pts
+    umount "$DIR"/dev
+}
+
+truncate_bin() {
+    if [ -z "$1" ] ; then
+        echo "err: no binary specified"
+        return 1
+    fi
+
+    local IN=$1
+    # shellcheck disable=SC2155
+    local START=$(gdisk -l "$IN" | grep ROOT | awk '{print $2}')
+    # shellcheck disable=SC2155
+    local END=$(gdisk -l "$IN" | grep ROOT | awk '{print $3}')
+    dd if="$IN" of="$IN" bs=512 skip="$START" conv=notrunc
+    truncate -s $(((END-4096+1)*512)) "$IN"
 }
 
 bin_to_tar() {
@@ -119,12 +172,8 @@ bin_to_tar() {
 
     local IN=$1
     local OUT=$2
-    # shellcheck disable=SC2155
-    local START=$(gdisk -l "$IN" | grep ROOT | awk '{print $2}')
-    # shellcheck disable=SC2155
-    local END=$(gdisk -l "$IN" | grep ROOT | awk '{print $3}')
-    dd if="$IN" of="$IN" bs=512 skip="$START" conv=notrunc
-    truncate -s $(((END-4096+1)*512)) "$IN"
+
+    truncate_bin "$IN"
     # shellcheck disable=SC2155
     local DIR=$(mktemp -d)
     mount "$IN" "$DIR"
@@ -162,7 +211,16 @@ upload() {
     pushd "$MODULUS_DIR"/archive > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
     tar -czf "$t" --exclude=coreos_developer_container* "$DRIVER_NAME"/"$DRIVER_VERSION"
-    if [ "$MODULUS_DOCKER" = false ] ; then
+
+    if [ "$MODULUS_DOCKER" = true ] ; then
+        docker run --rm \
+            -v "$PWD"/"$t":/"$t" \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --entrypoint=/usr/bin/aws \
+            quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
+            s3 cp /"$t" "$MODULUS_S3_BUCKET"
+    else
         rkt run \
             --net=host \
             --dns=host \
@@ -172,14 +230,6 @@ upload() {
             --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             --exec=/usr/bin/aws -- s3 cp /"$t" "$MODULUS_S3_BUCKET"
-    else
-        docker run --rm \
-            -v "$PWD"/"$t":/"$t" \
-            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-            --entrypoint=/usr/bin/aws \
-            quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
-            s3 cp /"$t" "$MODULUS_S3_BUCKET"
     fi
 }
 
@@ -191,7 +241,16 @@ download() {
     mkdir -p "$MODULUS_DIR"/archive
     pushd "$MODULUS_DIR"/archive > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
-    if [ "$MODULUS_DOCKER" = false ] ; then
+
+    if [ "$MODULUS_DOCKER" = true ] ; then
+        docker run --rm \
+            -v "$PWD":/out \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --entrypoint=/usr/bin/aws \
+            quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
+            s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
+    else
         rkt run \
             --net=host \
             --dns=host \
@@ -201,14 +260,6 @@ download() {
             --set-env=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             --set-env=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             --exec=/usr/bin/aws -- s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
-    else
-        docker run --rm \
-            -v "$PWD":/out \
-            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-            --entrypoint=/usr/bin/aws \
-            quay.io/coreos/awscli:025a357f05242fdad6a81e8a6b520098aa65a600 \
-            s3 cp "$MODULUS_S3_BUCKET""$t" /out/"$t"
     fi
 
     tar -xf "$t"
@@ -220,6 +271,7 @@ usage() {
     printf ' The options are:\n\n'
     printf '\t -b BOARD         \tContainer Linux release board, e.g. amd64-usr\n'
     printf '\t -c               \tcheck for Container Linux release version using update engine\n'
+    printf '\t -C               \tcompile in a CHROOT\n'
     printf '\t -d               \tdirectory in which to archive all assets, e.g. /opt/modulus\n'
     printf '\t -D               \trun all containers with Docker\n'
     printf '\t -f               \tforce install even if modules are up to date\n'
