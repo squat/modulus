@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# shellcheck disable=SC1091
+{
+    [ -f /usr/share/coreos/release ] && source /usr/share/coreos/release
+    [ -f /usr/share/coreos/update.conf ] && source /usr/share/coreos/update.conf
+    [ -f /etc/coreos/update.conf ] && source /etc/coreos/update.conf
+}
 MODULUS_BIN_DIR=${MODULUS_BIN_DIR:-/opt/modulus}
 MODULUS_DIR=${MODULUS_DIR:-$MODULUS_BIN_DIR}
 # shellcheck disable=SC1090
