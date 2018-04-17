@@ -7,18 +7,18 @@ After=network-online.target update-engine.service
 EnvironmentFile=/usr/share/coreos/release
 EnvironmentFile=/usr/share/coreos/update.conf
 EnvironmentFile=/etc/coreos/update.conf
-Environment=MODULUS_DIR=/opt/modulus
+Environment=MODULUS_BIN_DIR=/opt/modulus
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus download $(echo %i | tr '-' ' ')"
-ExecStart=-/bin/bash -c "${MODULUS_DIR}/modulus install $(echo %i | tr '-' ' ')"
-ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus compile $(echo %i | tr '-' ' ')"
-ExecStart=/bin/bash -c "${MODULUS_DIR}/modulus install $(echo %i | tr '-' ' ')"
-ExecStartPost=-/bin/bash -c "${MODULUS_DIR}/modulus upload $(echo %i | tr '-' ' ')"
-ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -c download $(echo %i | tr '-' ' ')"
-ExecStop=-/bin/bash -c "${MODULUS_DIR}/modulus -c install $(echo %i | tr '-' ' ')"
-ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus -cu compile $(echo %i | tr '-' ' ')"
-ExecStop=/bin/bash -c "${MODULUS_DIR}/modulus install $(echo %i | tr '-' ' ')"
+ExecStart=-/bin/bash -c "${MODULUS_BIN_DIR}/modulus download $(echo %i | tr '-' ' ')"
+ExecStart=-/bin/bash -c "${MODULUS_BIN_DIR}/modulus install $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "${MODULUS_BIN_DIR}/modulus compile $(echo %i | tr '-' ' ')"
+ExecStart=/bin/bash -c "${MODULUS_BIN_DIR}/modulus install $(echo %i | tr '-' ' ')"
+ExecStartPost=-/bin/bash -c "${MODULUS_BIN_DIR}/modulus upload $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "${MODULUS_BIN_DIR}/modulus -c download $(echo %i | tr '-' ' ')"
+ExecStop=-/bin/bash -c "${MODULUS_BIN_DIR}/modulus -c install $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "${MODULUS_BIN_DIR}/modulus -cu compile $(echo %i | tr '-' ' ')"
+ExecStop=/bin/bash -c "${MODULUS_BIN_DIR}/modulus install $(echo %i | tr '-' ' ')"
 TimeoutStopSec=infinity
 
 [Install]

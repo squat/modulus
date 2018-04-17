@@ -8,15 +8,16 @@ set -e
     [ -f /etc/coreos/update.conf ] && source /etc/coreos/update.conf
 }
 MODULUS_BIN_DIR=${MODULUS_BIN_DIR:-/opt/modulus}
-MODULUS_DIR=${MODULUS_DIR:-$MODULUS_BIN_DIR}
 # shellcheck disable=SC1090
-[ -e "$MODULUS_DIR"/.env ] && source "$MODULUS_DIR"/.env
+[ -e "$MODULUS_BIN_DIR"/.env ] && source "$MODULUS_BIN_DIR"/.env
+MODULUS_CACHE_DIR=${MODULUS_CACHE_DIR:-$MODULUS_BIN_DIR/archive}
 MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
 MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
 MODULUS_CHROOT=${MODULUS_CHROOT:-false}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
 MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
+MODULUS_INSTALL_DIR=${MODULUS_INSTALL_DIR:-/opt}
 MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
 MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
 
@@ -39,7 +40,7 @@ while getopts ":b:B:cCd:Dfg:r:u" o; do
         C)
             MODULUS_CHROOT=true;;
         d)
-            MODULUS_DIR=$OPTARG;;
+            MODULUS_CACHE_DIR=$OPTARG;;
         D)
             MODULUS_DOCKER=true;;
         f)
@@ -71,7 +72,7 @@ check_status() {
     local DRIVER_VERSION=$2
     # shellcheck disable=SC2155
     local KERNEL_VERSION=$(uname -r)
-    if [ -d /opt/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib/modules/"$KERNEL_VERSION" ]; then
+    if [ -d "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib/modules/"$KERNEL_VERSION" ]; then
         echo "$DRIVER_NAME $DRIVER_VERSION is up to date"
         return 0;
     fi
@@ -87,8 +88,8 @@ compile() {
     local CONTAINER_URL=http://$MODULUS_GROUP.release.core-os.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
 
     echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
-    mkdir -p "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION"
-    pushd "$MODULUS_DIR"/archive/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
+    mkdir -p "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"
+    pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
     local EXIT_CODE=
     for i in {1..5}; do
         gpg2 --keyserver pgp.mit.edu --recv-keys 04127D0BFABEC8871FFB2CCE50E0885593D2DCB4 && break
@@ -194,27 +195,27 @@ install() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
     if [ "$MODULUS_FORCE" = true ] ; then
-        rm -rf /opt/"$DRIVER_NAME"
+        rm -rf "${MODULUS_INSTALL_DIR:?}"/"$DRIVER_NAME"
     fi
-    if [ -e /opt/"$DRIVER_NAME" ] ; then
-        if [ ! "$MODULUS_DIR"/archive/"$DRIVER_NAME" -ef /opt/"$DRIVER_NAME" ] ; then
-            echo "/opt/$DRIVER_NAME exists; use -f to force install"
+    if [ -e "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME" ] ; then
+        if [ ! "$MODULUS_CACHE_DIR"/"$DRIVER_NAME" -ef "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME" ] ; then
+            echo "$MODULUS_INSTALL_DIR/$DRIVER_NAME exists; use -f to force install"
             exit 1
         fi
     else
-        ln -s "$MODULUS_DIR"/archive/"$DRIVER_NAME" /opt/"$DRIVER_NAME"
+        ln -s "$MODULUS_CACHE_DIR"/"$DRIVER_NAME" "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"
     fi
 
     mkdir -p /etc/ld.so.conf.d
-    echo /opt/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > /etc/ld.so.conf.d/"$DRIVER_NAME"-"$DRIVER_VERSION".conf
+    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > /etc/ld.so.conf.d/"$DRIVER_NAME"-"$DRIVER_VERSION".conf
     ldconfig 2> /dev/null
 }
 
 upload() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
-    mkdir -p "$MODULUS_DIR"/archive
-    pushd "$MODULUS_DIR"/archive > /dev/null
+    mkdir -p "$MODULUS_CACHE_DIR"
+    pushd "$MODULUS_CACHE_DIR" > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
     tar -czf "$t" --exclude=coreos_developer_container* "$DRIVER_NAME"/"$DRIVER_VERSION"
 
@@ -244,8 +245,8 @@ download() {
     local DRIVER_VERSION=$2
     [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_NAME" "$DRIVER_VERSION" && exit 0
 
-    mkdir -p "$MODULUS_DIR"/archive
-    pushd "$MODULUS_DIR"/archive > /dev/null
+    mkdir -p "$MODULUS_CACHE_DIR"
+    pushd "$MODULUS_CACHE_DIR" > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
 
     if [ "$MODULUS_DOCKER" = true ] ; then
@@ -287,8 +288,8 @@ usage() {
     printf '\n'
     printf 'The commands are:\n\n'
     printf '\t compile <module> <version> \tbuild the <module> kernel module\n'
-    printf '\t download <module> <version>\tdownload the compiled kernel module and assets for <module> from S3 to %s/archive/<module>\n' "$MODULUS_DIR"
-    printf '\t install <module> <version> \tinstall the <module> kernel module in /opt/<module> and install all libraries\n'
+    printf '\t download <module> <version>\tdownload the compiled kernel module and assets for <module> from S3 to %s/<module>\n' "$MODULUS_CACHE_DIR"
+    printf '\t install <module> <version> \tinstall the <module> kernel module in %s/<module> and install all libraries\n' "$MODULUS_INSTALL_DIR"
     printf '\t status <module> <version>  \tcheck if an up-to-date version of <module> is installed\n'
     printf '\t upload <module> <version>  \tupload the compiled kernel module and assets for <module> to s3\n'
     printf '\n'
