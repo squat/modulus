@@ -19,6 +19,7 @@ MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
 MODULUS_INSTALL=${MODULUS_INSTALL:-false}
 MODULUS_INSTALL_DIR=${MODULUS_INSTALL_DIR:-/opt}
+MODULUS_LD_ROOT=${MODULUS_LD_ROOT:-/}
 MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
 MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
 
@@ -214,9 +215,9 @@ install() {
         ln -s "$MODULUS_CACHE_DIR"/"$DRIVER_NAME" "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"
     fi
 
-    mkdir -p /etc/ld.so.conf.d
-    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > /etc/ld.so.conf.d/"$DRIVER_NAME"-"$DRIVER_VERSION".conf
-    ldconfig 2> /dev/null
+    mkdir -p "$MODULUS_LD_ROOT"/etc/ld.so.conf.d
+    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME"-"$DRIVER_VERSION".conf
+    ldconfig -r "$MODULUS_LD_ROOT" 2> /dev/null
 }
 
 upload() {
