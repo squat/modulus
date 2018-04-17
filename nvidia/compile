@@ -6,9 +6,9 @@ echo "Preparing environment"
 . /usr/share/coreos/release
 /usr/bin/emerge-gitclone
 OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep coreos-overlay | cut -d\" -f 8)
- PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep portage-stable | cut -d\" -f 8)
- git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
- git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
+PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep portage-stable | cut -d\" -f 8)
+git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
+git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
 # try to use pre-built binaries and fall back to building from source
 emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
 cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
@@ -23,15 +23,11 @@ curl -Ls "http://us.download.nvidia.com/XFree86/Linux-x86_64/$DRIVER_VERSION/NVI
 chmod +x nvidia.run
 ./nvidia.run -x -s
 pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
-if echo "$KERNEL_VERSION" | grep -q "^4.10]" && [ "$DRIVER_VERSION" == "381.22" ]; then
-  curl -O https://gist.githubusercontent.com/squat/40da8fd85d6d3acb427ba58372d2c4b2/raw/de4e3bdee5a74347bda7dced86408278573d0119/kernel_4.10.patch
-  patch -p1 < kernel_4.10.patch
-fi
 ./nvidia-installer -s -n --kernel-source-path=/usr/src/linux --no-check-for-alternate-installs --no-opengl-files --kernel-install-path="$PWD" --log-file-name="$PWD"/nvidia-installer.log || true
 if [ -e kernel/nvidia.ko ] ; then echo "Successfully compiled NVIDIA modules" ; else echo "Failed to compile NVIDIA modules" && cat "$PWD"/nvidia-installer.log && exit 1 ; fi
 
 echo "Archiving assets"
-mkdir -p /out/lib /out/lib/modules/"$KERNEL_VERSION" /out/bin
+mkdir -p /out/lib/modules/"$KERNEL_VERSION" /out/bin
 cp ./*.so* /out/lib
 cp kernel/*.ko /out/lib/modules/"$KERNEL_VERSION"
 for b in nvidia-debugdump nvidia-cuda-mps-control nvidia-xconfig nvidia-modprobe nvidia-smi nvidia-cuda-mps-server nvidia-persistenced nvidia-settings; do cp "$b" /out/bin/; done
