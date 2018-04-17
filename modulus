@@ -17,6 +17,7 @@ MODULUS_CHROOT=${MODULUS_CHROOT:-false}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
 MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
+MODULUS_INSTALL=${MODULUS_INSTALL:-false}
 MODULUS_INSTALL_DIR=${MODULUS_INSTALL_DIR:-/opt}
 MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
 MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
@@ -29,7 +30,7 @@ check_for_update() {
     fi
 }
 
-while getopts ":b:B:cCd:Dfg:r:u" o; do
+while getopts ":b:B:cCd:Dfg:ir:u" o; do
     case $o in
         b)
             MODULUS_COREOS_RELEASE_BOARD=$OPTARG;;
@@ -51,6 +52,8 @@ while getopts ":b:B:cCd:Dfg:r:u" o; do
                 echo "Usage: $(basename "$0") [-g <alpha|beta|stable>]" 1>&2; exit 1;
             fi
             ;;
+        i)
+            MODULUS_INSTALL=true;;
         r)
             MODULUS_COREOS_RELEASE_VERSION=$OPTARG;;
         u)
@@ -132,8 +135,13 @@ compile() {
     fi
     rm -f coreos_developer_container.bin
 
-    [ "$MODULUS_UPLOAD" = false ] && exit 0
-    upload "$DRIVER_NAME" "$DRIVER_VERSION"
+    if [ "$MODULUS_UPLOAD" = true ] ; then
+        upload "$DRIVER_NAME" "$DRIVER_VERSION"
+    fi
+
+    if [ "$MODULUS_INSTALL" = true ] ; then
+        install "$DRIVER_NAME" "$DRIVER_VERSION"
+    fi
 }
 
 run_chroot() {
@@ -283,6 +291,7 @@ usage() {
     printf '\t -D               \trun all containers with Docker\n'
     printf '\t -f               \tforce install even if modules are up to date\n'
     printf '\t -g GROUP         \tContainer Linux release group, i.e. alpha, beta, or stable\n'
+    printf '\t -i               \tinstall the modules after compiling\n'
     printf '\t -r RELEASE       \tContainer Linux release version, e.g. 1353.4.0\n'
     printf '\t -u               \tupload the driver to S3 after compiling\n'
     printf '\n'
