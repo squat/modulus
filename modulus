@@ -71,6 +71,18 @@ while getopts ":b:B:cCd:Dfg:ir:u" o; do
 done
 shift $((OPTIND-1))
 
+check_cache() {
+    local DRIVER_NAME=$1
+    local DRIVER_VERSION=$2
+    # shellcheck disable=SC2155
+    local KERNEL_VERSION=$(uname -r)
+    if [ -d "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib/modules/"$KERNEL_VERSION" ]; then
+        echo "$DRIVER_NAME $DRIVER_VERSION exists in the cache"
+        return 0;
+    fi
+    return 1;
+}
+
 check_status() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
@@ -89,52 +101,54 @@ compile() {
     local DRIVER_VERSION=$2
     [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_NAME" "$DRIVER_VERSION" && exit 0
 
-    local CONTAINER_URL=http://$MODULUS_GROUP.release.core-os.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
+    if [ "$MODULUS_FORCE" = true ] || ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ; then
+        local CONTAINER_URL=http://$MODULUS_GROUP.release.core-os.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
 
-    echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
-    mkdir -p "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"
-    pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-    local EXIT_CODE=
-    for i in {1..5}; do
-        gpg2 --keyserver pgp.mit.edu --recv-keys 04127D0BFABEC8871FFB2CCE50E0885593D2DCB4 && break
-        EXIT_CODE=$?
-        [ $i -eq 5 ] && exit $EXIT_CODE
-        sleep 5
-    done
+        echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
+        mkdir -p "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"
+        pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
+        local EXIT_CODE=
+        for i in {1..5}; do
+            gpg2 --keyserver pgp.mit.edu --recv-keys 04127D0BFABEC8871FFB2CCE50E0885593D2DCB4 && break
+            EXIT_CODE=$?
+            [ $i -eq 5 ] && exit $EXIT_CODE
+            sleep 5
+        done
 
-    curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
+        curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
 
-    if [ "$MODULUS_CHROOT" = true ] ; then
-        truncate_bin coreos_developer_container.bin
-        # shellcheck disable=SC2155
-        local DIR=$(mktemp -d)
-        mount coreos_developer_container.bin "$DIR"
-        mkdir -p "$DIR"/opt/modulus
-        mount -o bind,ro "$MODULUS_BIN_DIR" "$DIR"/opt/modulus
-        mkdir -p "$DIR"/out
-        mount --bind "$PWD" "$DIR"/out
-        run_chroot "$DIR" /opt/modulus/"$DRIVER_NAME"/compile
-        umount "$DIR"/out
-        umount "$DIR"/opt/modulus
-        umount "$DIR"
-    elif [ "$MODULUS_DOCKER" = true ] ; then
-        bin_to_tar coreos_developer_container.bin coreos_developer_container
-        docker run --rm \
-            -v "$MODULUS_BIN_DIR":/opt/modulus:ro \
-            -v "$PWD":/out \
-            -e DRIVER_VERSION="$DRIVER_VERSION" \
-            coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
-    else
-        sudo systemd-nspawn \
-            --as-pid2 \
-            --bind-ro="$MODULUS_BIN_DIR":/opt/modulus \
-            --bind="$PWD":/out \
-            --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
-            --image=coreos_developer_container.bin \
-            --register=no \
-            /opt/modulus/"$DRIVER_NAME"/compile
+        if [ "$MODULUS_CHROOT" = true ] ; then
+            truncate_bin coreos_developer_container.bin
+            # shellcheck disable=SC2155
+            local DIR=$(mktemp -d)
+            mount coreos_developer_container.bin "$DIR"
+            mkdir -p "$DIR"/opt/modulus
+            mount -o bind,ro "$MODULUS_BIN_DIR" "$DIR"/opt/modulus
+            mkdir -p "$DIR"/out
+            mount --bind "$PWD" "$DIR"/out
+            run_chroot "$DIR" /opt/modulus/"$DRIVER_NAME"/compile
+            umount "$DIR"/out
+            umount "$DIR"/opt/modulus
+            umount "$DIR"
+        elif [ "$MODULUS_DOCKER" = true ] ; then
+            bin_to_tar coreos_developer_container.bin coreos_developer_container
+            docker run --rm \
+                -v "$MODULUS_BIN_DIR":/opt/modulus:ro \
+                -v "$PWD":/out \
+                -e DRIVER_VERSION="$DRIVER_VERSION" \
+                coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
+        else
+            sudo systemd-nspawn \
+                --as-pid2 \
+                --bind-ro="$MODULUS_BIN_DIR":/opt/modulus \
+                --bind="$PWD":/out \
+                --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
+                --image=coreos_developer_container.bin \
+                --register=no \
+                /opt/modulus/"$DRIVER_NAME"/compile
+        fi
+        rm -f coreos_developer_container.bin
     fi
-    rm -f coreos_developer_container.bin
 
     if [ "$MODULUS_UPLOAD" = true ] ; then
         upload "$DRIVER_NAME" "$DRIVER_VERSION"
