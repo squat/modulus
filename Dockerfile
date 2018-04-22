@@ -1,6 +1,7 @@
 FROM debian:buster-slim
 MAINTAINER Lucas Servén <lserven@gmail.com>
 RUN apt-get update && apt-get install -y \
+    bzip2 \
     curl \
     gdisk \
     gnupg2 \
