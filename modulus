@@ -99,9 +99,8 @@ check_status() {
 compile() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
-    [ "$MODULUS_FORCE" = false ] && check_status "$DRIVER_NAME" "$DRIVER_VERSION" && exit 0
 
-    if [ "$MODULUS_FORCE" = true ] || ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ; then
+    if [ "$MODULUS_FORCE" = true ] || ! check_status "$DRIVER_NAME" "$DRIVER_VERSION" || ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ; then
         local CONTAINER_URL=http://$MODULUS_GROUP.release.core-os.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
 
         echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
