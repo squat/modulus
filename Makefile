@@ -1,6 +1,6 @@
 .PHONY: test
 
-TEST_FILES?=modulus nvidia/compile
+TEST_FILES?=modulus nvidia/compile nvidia/install
 SHELLCHECK_IMAGE?=koalaman/shellcheck
 
 test:
