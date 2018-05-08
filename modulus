@@ -102,7 +102,7 @@ compile() {
     local DRIVER_VERSION=$2
 
     if [ "$MODULUS_DOWNLOAD" = true ] && ( [ "$MODULUS_FORCE" = true ] || ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ) ; then
-        download "$DRIVER_NAME" "$DRIVER_VERSION"
+        download "$DRIVER_NAME" "$DRIVER_VERSION" || true
     fi
 
     if [ "$MODULUS_FORCE" = true ] || ! check_status "$DRIVER_NAME" "$DRIVER_VERSION" && ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ; then
