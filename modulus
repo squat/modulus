@@ -234,7 +234,7 @@ install() {
     fi
 
     mkdir -p "$MODULUS_LD_ROOT"/etc/ld.so.conf.d
-    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME"-"$DRIVER_VERSION".conf
+    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME".conf
     ldconfig -r "$MODULUS_LD_ROOT" 2> /dev/null
     # shellcheck disable=SC1090
     source "$MODULUS_BIN_DIR"/"$DRIVER_NAME"/install
