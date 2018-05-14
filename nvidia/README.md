@@ -1,34 +1,51 @@
-# Nvidia GPUs on CoreOS Container Linux
-Leveraging nvidia GPUs on Container Linux involves the following steps:
-* compiling the nvidia kernel modules;
+# NVIDIA GPUs on CoreOS Container Linux
+Leveraging NVIDIA GPUs on Container Linux involves the following steps:
+* compiling the NVIDIA kernel modules;
 * loading the kernel modules on demand;
-* creating nvidia device files; and
-* loading nvidia libraries
+* creating NVIDIA device files; and
+* loading NVIDIA libraries
 
 Compounding this complexity further is the fact that these steps have to be executed whenever the Container Linux system updates since the drivers may no longer be compatible with the new kernel.
 
-Modulus takes care of automating all of these steps and ensures that the modules are up-to-date for the host's kernel.
+Modulus takes care of automating all of these steps and ensures that the kernel modules are up-to-date for the host's kernel.
 
-## Requirements
+## Installation for Kubernetes
+
+### Requirements
+You will need a running Kubernetes cluster and the `kubectl` command to deploy Modulus.
+
+### Getting Started
+Edit the provided Modulus daemonset to specify the version of NVIDIA you would like to compile, e.g. 390.48.
+Then create the deployment:
+```sh
+kubectl apply -f daemonset.yaml
+```
+
+This daemonset will run on a Modulus pod on all the Kubernetes nodes.
+You may choose to add a `nodeSelector` to schedule Modulus exclusively to nodes with GPUs.
+
+## Installation for Systemd
+
+### Requirements
 First, make sure you have the [Modulus code available](https://github.com/squat/modulus#installation) on your Container Linux machine and that the `modulus` service is installed.
 
-## Getting Started
-Install and start the `create-devices` service with the instance name set to the version of nvidia you would like to compile, e.g. 387.34:
+### Getting Started
+Install and start the `create-devices` service with the instance name set to the version of NVIDIA you would like to compile, e.g. 390.48:
 ```sh
 sudo cp /opt/modulus/nvidia/create-devices@.service /etc/systemd/system/create-devices@.service
-sudo systemctl enable create-devices@387.34
-sudo systemctl start create-devices@387.34
+sudo systemctl enable create-devices@390.48
+sudo systemctl start create-devices@390.48
 ```
 
-This service takes care of loading the nvidia kernel modules and creating the nvidia device files. It leverages the `modulus` service, which takes care of automatically compiling, installing, and backing up the kernel modules.
+This service takes care of loading the NVIDIA kernel modules and creating the NVIDIA device files. It leverages the `modulus` service, which takes care of automatically compiling, installing, and backing up the kernel modules.
+
+Compiling the NVIDIA kernel modules can take between 10-15 minutes depending on your Internet speed, CPU, and RAM. To check the progress of the compilation, run:
+```sh
+journalctl -fu create-devices@390.48
+```
 
 ## Verify
-Compiling the nvidia kernel modules can take between 10-15 minutes depending on your Internet speed, CPU, and RAM. To check the progress of the compilation, run:
-```sh
-journalctl -fu create-devices@387.34
-```
-
-Once the `create-devices` service successfully starts, the system should have nvidia device files and drivers loaded. To verify that the kernel modules were loaded, run:
+Once Modulus has successfully run, the host should have NVIDIA device files and drivers loaded. To verify that the kernel modules were loaded, run:
 ```sh
 lsmod | grep nvidia
 ```
@@ -50,19 +67,33 @@ This should produce output like:
 /dev/nvidia-uvm  /dev/nvidia0  /dev/nvidiactl
 ```
 
-Finally, try running the nvidia system monitoring interface (SMI) command, `nvidia-smi`, to check the status of the connected GPU:
+Finally, try running the NVIDIA system monitoring interface (SMI) command, `nvidia-smi`, to check the status of the connected GPU:
 ```sh
-/opt/nvidia/387.34/bin/nvidia-smi
+/opt/nvidia/390.48/bin/nvidia-smi
 ```
 
 If your GPU is connected, this command will return information about the model, temperature, memory usage, GPU utilization etc.
 
-## Leveraging Nvidia GPUs in Containers
+## Leveraging NVIDIA GPUs in Containers
 Now that the kernel modules are loaded, devices are present, and libraries have been created, the connected GPU can be utilized in containerized applications.
 
-In order to give the container access to the GPU, the device files must be explicitly loaded in the namespace, and the nvidia libraries and binaries must be mounted in the container. Consider the following command, which runs the `nvidia-smi` command inside of a Docker container:
+In order to give the container access to the GPU, the device files must be explicitly loaded in the namespace, and the NVIDIA libraries and binaries must be mounted in the container. Consider the following command, which runs the `nvidia-smi` command inside of a Docker container:
 ```sh
-docker run -it --device=/dev/nvidiactl --device=/dev/nvidia-uvm --device=/dev/nvidia0 --volume=/opt/nvidia/387.34:/usr/local/nvidia:ro --entrypoint=nvidia-smi nvidia/cuda:8.0-cudnn5-devel
+docker run -it --device=/dev/nvidiactl --device=/dev/nvidia-uvm --device=/dev/nvidia0 --volume=/opt/nvidia/390.48:/usr/local/nvidia:ro --entrypoint=nvidia-smi nvidia/cuda:8.0-cudnn5-devel
 ```
 
 There exist plugins that help with automating the loading of GPU devices in Docker containers; for more information, checkout the [NVIDIA-Docker](https://github.com/NVIDIA/nvidia-docker) repository.
+
+## Leveraging NVIDIA GPUs in Kubernetes
+In order to make use of the NVIDIA drivers and devices in your Kubernetes workloads, you will need to deploy a [Kubernetes device plugin](https://kubernetes.io/docs/concepts/cluster-administration/device-plugins/) for NVIDIA GPUs.
+Drivers compiled with Modulus work seamlessly with the Kubernetes device plugin provided upstream in the [addons directory](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/device-plugins/nvidia-gpu/daemonset.yaml) as well as the [official NVIDIA device plugin](https://github.com/NVIDIA/k8s-device-plugin).
+
+Deploying the former requires no special NVIDIA container runtime and can be done with one command:
+```sh
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/kubernetes/master/cluster/addons/device-plugins/nvidia-gpu/daemonset.yaml
+```
+
+Once the device plugin is running, verify that the desired nodes have allocatable GPUs:
+```sh
+kubectl describe node <node-name>
+```
