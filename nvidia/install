@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-depmod -b "$MODULUS_INSTALL_DIR/$DRIVER_NAME/$DRIVER_VERSION"
-modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME/$DRIVER_VERSION" nvidia
-modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME/$DRIVER_VERSION" nvidia-uvm
+depmod -b "$MODULUS_INSTALL_DIR/$DRIVER_NAME"
+modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME" nvidia
+modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME" nvidia-uvm
 if [ ! -e /dev/nvidia0 ] ; then
     NVDEVS=$(lspci | grep -i NVIDIA)
     N3D=$(echo "$NVDEVS" | grep -c "3D controller") || true

@@ -89,7 +89,7 @@ check_status() {
     local DRIVER_VERSION=$2
     # shellcheck disable=SC2155
     local KERNEL_VERSION=$(uname -r)
-    if [ -d "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib/modules/"$KERNEL_VERSION" ]; then
+    if [ -d "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/lib/modules/"$KERNEL_VERSION" ] && [ "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" -ef "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME" ]; then
         echo "$DRIVER_NAME $DRIVER_VERSION is up to date"
         return 0;
     fi
@@ -221,20 +221,11 @@ bin_to_tar() {
 install() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
-    if [ "$MODULUS_FORCE" = true ] ; then
-        rm -rf "${MODULUS_INSTALL_DIR:?}"/"$DRIVER_NAME"
-    fi
-    if [ -e "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME" ] ; then
-        if [ ! "$MODULUS_CACHE_DIR"/"$DRIVER_NAME" -ef "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME" ] ; then
-            echo "$MODULUS_INSTALL_DIR/$DRIVER_NAME exists; use -f to force install"
-            exit 1
-        fi
-    else
-        ln -s "$MODULUS_CACHE_DIR"/"$DRIVER_NAME" "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"
-    fi
+    rm -rf "${MODULUS_INSTALL_DIR:?}"/"$DRIVER_NAME"
+    ln -s "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"
 
     mkdir -p "$MODULUS_LD_ROOT"/etc/ld.so.conf.d
-    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME".conf
+    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME".conf
     ldconfig -r "$MODULUS_LD_ROOT" 2> /dev/null
     # shellcheck disable=SC1090
     source "$MODULUS_BIN_DIR"/"$DRIVER_NAME"/install
