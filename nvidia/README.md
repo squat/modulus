@@ -30,18 +30,17 @@ You may choose to add a `nodeSelector` to schedule Modulus exclusively to nodes 
 First, make sure you have the [Modulus code available](https://github.com/squat/modulus#installation) on your Container Linux machine and that the `modulus` service is installed.
 
 ### Getting Started
-Install and start the `create-devices` service with the instance name set to the version of NVIDIA you would like to compile, e.g. 390.48:
+Enable and start the `modulus` template unit file with the desired NVIDIA version, e.g. 390.48:
 ```sh
-sudo cp /opt/modulus/nvidia/create-devices@.service /etc/systemd/system/create-devices@.service
-sudo systemctl enable create-devices@390.48
-sudo systemctl start create-devices@390.48
+sudo systemctl enable modulus@nvidia-390.48
+sudo systemctl start modulus@nvidia-390.48
 ```
 
-This service takes care of loading the NVIDIA kernel modules and creating the NVIDIA device files. It leverages the `modulus` service, which takes care of automatically compiling, installing, and backing up the kernel modules.
+This service takes care of automatically compiling, installing, backing up, and loading the NVIDIA kernel modules as well as creating the NVIDIA device files.
 
 Compiling the NVIDIA kernel modules can take between 10-15 minutes depending on your Internet speed, CPU, and RAM. To check the progress of the compilation, run:
 ```sh
-journalctl -fu create-devices@390.48
+journalctl -fu modulus@nvidia-390.48
 ```
 
 ## Verify
@@ -69,7 +68,7 @@ This should produce output like:
 
 Finally, try running the NVIDIA system monitoring interface (SMI) command, `nvidia-smi`, to check the status of the connected GPU:
 ```sh
-/opt/nvidia/390.48/bin/nvidia-smi
+/opt/nvidia/bin/nvidia-smi
 ```
 
 If your GPU is connected, this command will return information about the model, temperature, memory usage, GPU utilization etc.
