@@ -49,7 +49,7 @@ spec:
         - name: dev
           mountPath: /dev
       containers:
-      - image: "gcr.io/google-containers/pause:2.0"
+      - image: k8s.gcr.io/pause-amd64:3.1
         name: pause
       tolerations:
       - key: "nvidia.com/gpu"
