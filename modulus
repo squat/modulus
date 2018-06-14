@@ -23,6 +23,7 @@ MODULUS_INSTALL_DIR=${MODULUS_INSTALL_DIR:-/opt}
 MODULUS_LD_ROOT=${MODULUS_LD_ROOT:-/}
 MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
 MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
+IMAGE_VOLSIZE_GIB=${IMAGE_VOLSIZE_GIB:-4}
 
 check_for_update() {
     # shellcheck disable=SC2163
@@ -32,7 +33,7 @@ check_for_update() {
     fi
 }
 
-while getopts ":b:B:cCd:Dfg:ir:u" o; do
+while getopts ":b:B:cCd:Dfg:ir:uv:" o; do
     case $o in
         b)
             MODULUS_COREOS_RELEASE_BOARD=$OPTARG;;
@@ -60,6 +61,13 @@ while getopts ":b:B:cCd:Dfg:ir:u" o; do
             MODULUS_COREOS_RELEASE_VERSION=$OPTARG;;
         u)
             MODULUS_UPLOAD=true;;
+        v)  
+            IMAGE_VOLSIZE_GIB=$OPTARG
+            INT_REGEX='^[0-9]+$'
+            if ! [[ $IMAGE_VOLSIZE_GIB =~ $INT_REGEX ]] || [ "$IMAGE_VOLSIZE_GIB" -lt 4 ]; then
+                echo "err: VOLSIZE value is expressed in GiB and must be an integer >= 4" 1>&2; exit 1;
+            fi
+            ;;            
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 1
@@ -190,6 +198,25 @@ truncate_bin() {
     local END=$(gdisk -l "$IN" | grep ROOT | awk '{print $3}')
     dd if="$IN" of="$IN" bs=512 skip="$START" conv=notrunc
     truncate -s $(((END-4096+1)*512)) "$IN"
+    resize_image_vol
+}
+
+resize_image_vol() {
+    # shellcheck disable=SC2155
+    local BYTES_AVAILABLE=$(df --output=avail -B 1 . | tail -1)
+    # shellcheck disable=SC2155
+    local TOTAL_BYTES_FOR_IMAGE=$((IMAGE_VOLSIZE_GIB*1073741824))
+    if ! [ "$TOTAL_BYTES_FOR_IMAGE" -lt "$BYTES_AVAILABLE" ]; then
+        echo "err: not enough disk space. $TOTAL_BYTES_FOR_IMAGE-byte image volume size requested but there are only $BYTES_AVAILABLE bytes availble on-disk"
+        exit 1
+    fi
+    truncate -s "$TOTAL_BYTES_FOR_IMAGE" "$IN"
+    losetup -v -f "$IN"
+    # shellcheck disable=SC2155
+    local LOOP_DEVICE=$(losetup -l | grep "$IN" | grep -v "(deleted)" | awk '{print $1}')
+    e2fsck -v -y -f "$LOOP_DEVICE"
+    resize2fs "$LOOP_DEVICE" "${IMAGE_VOLSIZE_GIB}G"
+    losetup -v -d "$LOOP_DEVICE"
 }
 
 bin_to_tar() {
@@ -302,6 +329,7 @@ usage() {
     printf '\t -i               \tinstall the modules after compiling\n'
     printf '\t -r RELEASE       \tContainer Linux release version, e.g. 1353.4.0\n'
     printf '\t -u               \tupload the driver to S3 after compiling\n'
+    printf '\t -v VOLSIZE       \tvolume size of dev image (in GiB) to use if compiling in CHROOT, must be an integer >= 4\n'    
     printf '\n'
     printf 'The commands are:\n\n'
     printf '\t compile <module> <version> \tbuild the <module> kernel module\n'
