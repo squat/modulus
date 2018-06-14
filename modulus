@@ -64,7 +64,7 @@ while getopts ":b:B:cCd:Dfg:ir:uv:" o; do
         v)  
             IMAGE_VOLSIZE_GIB=$OPTARG
             INT_REGEX='^[0-9]+$'
-            if ! [[ $IMAGE_VOLSIZE_GIB =~ $INT_REGEX ]] || [ "$IMAGE_VOLSIZE_GIB" -lt 4 ]; then
+            if ! [ "$GIB_WANTED" -eq "$GIB_WANTED" ] 2>/dev/null || [ "$GIB_WANTED" -lt 4 ]; then
                 echo "err: VOLSIZE value is expressed in GiB and must be an integer >= 4" 1>&2; exit 1;
             fi
             ;;            
