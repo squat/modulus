@@ -213,7 +213,7 @@ resize_image_vol() {
     truncate -s "$TOTAL_BYTES_FOR_IMAGE" "$IN"
     losetup -v -f "$IN"
     # shellcheck disable=SC2155
-    local LOOP_DEVICE=$(losetup -l | grep "$IN" | grep -v "(deleted)" | awk '{print $1}')
+    local LOOP_DEVICE=$(losetup -a | grep "$IN" | grep -v "(deleted)" | awk '{print $1}' | sed 's/://')
     e2fsck -v -y -f "$LOOP_DEVICE"
     resize2fs "$LOOP_DEVICE" "${IMAGE_VOLSIZE_GIB}G"
     losetup -v -d "$LOOP_DEVICE"
