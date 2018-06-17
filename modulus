@@ -197,10 +197,12 @@ truncate_bin() {
     local END=$(gdisk -l "$IN" | grep ROOT | awk '{print $3}')
     dd if="$IN" of="$IN" bs=512 skip="$START" conv=notrunc
     truncate -s $(((END-4096+1)*512)) "$IN"
-    resize_image_vol
+    resize_image_vol "$IN"
 }
 
 resize_image_vol() {
+    # shellcheck disable=SC2155
+    local IN=$1
     # shellcheck disable=SC2155
     local BYTES_AVAILABLE=$(df --output=avail -B 1 . | tail -1)
     # shellcheck disable=SC2155
