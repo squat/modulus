@@ -111,13 +111,7 @@ compile() {
         echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
         mkdir -p "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"
         pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-        local EXIT_CODE=
-        for i in {1..5}; do
-            gpg2 --keyserver pgp.mit.edu --recv-keys 04127D0BFABEC8871FFB2CCE50E0885593D2DCB4 && break
-            EXIT_CODE=$?
-            [ $i -eq 5 ] && exit $EXIT_CODE
-            sleep 5
-        done
+        curl https://coreos.com/security/image-signing-key/CoreOS_Image_Signing_Key.asc | gpg --import
 
         curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
 
