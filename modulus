@@ -18,12 +18,12 @@ MODULUS_DOCKER=${MODULUS_DOCKER:-false}
 MODULUS_DOWNLOAD=${MODULUS_DOWNLOAD:-false}
 MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
+MODULUS_IMAGE_VOLSIZE_GIB=${MODULUS_IMAGE_VOLSIZE_GIB:-4}
 MODULUS_INSTALL=${MODULUS_INSTALL:-false}
 MODULUS_INSTALL_DIR=${MODULUS_INSTALL_DIR:-/opt}
 MODULUS_LD_ROOT=${MODULUS_LD_ROOT:-/}
 MODULUS_S3_BUCKET=${MODULUS_S3_BUCKET}
 MODULUS_UPLOAD=${MODULUS_UPLOAD:-false}
-IMAGE_VOLSIZE_GIB=${IMAGE_VOLSIZE_GIB:-4}
 
 check_for_update() {
     # shellcheck disable=SC2163
@@ -62,8 +62,8 @@ while getopts ":b:B:cCd:Dfg:ir:uv:" o; do
         u)
             MODULUS_UPLOAD=true;;
         v)  
-            IMAGE_VOLSIZE_GIB=$OPTARG
-            if ! [ "$IMAGE_VOLSIZE_GIB" -eq "$IMAGE_VOLSIZE_GIB" ] 2>/dev/null || [ "$IMAGE_VOLSIZE_GIB" -lt 4 ]; then
+            MODULUS_IMAGE_VOLSIZE_GIB=$OPTARG
+            if ! [ "$MODULUS_IMAGE_VOLSIZE_GIB" -eq "$MODULUS_IMAGE_VOLSIZE_GIB" ] 2>/dev/null || [ "$MODULUS_IMAGE_VOLSIZE_GIB" -lt 4 ]; then
                 echo "err: VOLSIZE value is expressed in GiB and must be an integer >= 4" 1>&2; exit 1;
             fi
             ;;            
@@ -201,12 +201,11 @@ truncate_bin() {
 }
 
 resize_image_vol() {
-    # shellcheck disable=SC2155
     local IN=$1
     # shellcheck disable=SC2155
     local BYTES_AVAILABLE=$(df --output=avail -B 1 . | tail -1)
     # shellcheck disable=SC2155
-    local TOTAL_BYTES_FOR_IMAGE=$((IMAGE_VOLSIZE_GIB*1073741824))
+    local TOTAL_BYTES_FOR_IMAGE=$((MODULUS_IMAGE_VOLSIZE_GIB*1073741824))
     if ! [ "$TOTAL_BYTES_FOR_IMAGE" -lt "$BYTES_AVAILABLE" ]; then
         echo "err: not enough disk space. $TOTAL_BYTES_FOR_IMAGE-byte image volume size requested but there are only $BYTES_AVAILABLE bytes availble on-disk"
         exit 1
@@ -216,7 +215,7 @@ resize_image_vol() {
     # shellcheck disable=SC2155
     local LOOP_DEVICE=$(losetup -a | grep "$IN" | grep -v "(deleted)" | awk '{print $1}' | sed 's/://')
     e2fsck -v -y -f "$LOOP_DEVICE"
-    resize2fs "$LOOP_DEVICE" "${IMAGE_VOLSIZE_GIB}G"
+    resize2fs "$LOOP_DEVICE" "${MODULUS_IMAGE_VOLSIZE_GIB}G"
     losetup -v -d "$LOOP_DEVICE"
 }
 
