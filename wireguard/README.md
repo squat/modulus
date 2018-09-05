@@ -36,7 +36,7 @@ udp_tunnel             16384  1 wireguard
 
 Finally, try creating a WireGuard interface and using the WireGuard binary, `wg`, to inspect it:
 ```sh
-sudo ip link add dev wg0 type wireguard && sudo /opt/wireguard/bin/wg show all && sudo ip link del wg0
+sudo ip link add dev wg0 type wireguard && sudo /opt/drivers/wireguard/bin/wg show all && sudo ip link del wg0
 ```
 
 This should produce some output like:
