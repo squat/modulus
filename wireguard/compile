@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+# Download kernel sources using common function.
+# shellcheck disable=SC1091
+. /opt/modulus/modulus src
+
+echo "Compiling WireGuard modules"
+mkdir -p /tmp/wireguard
+pushd /tmp/wireguard
+curl -Ls "https://git.zx2c4.com/WireGuard/snapshot/WireGuard-$DRIVER_VERSION.tar.xz" | tar -xJ --strip-components=1
+pushd src
+KERNELDIR=/lib/modules/"$KERNEL_VERSION"/build make
+if [ -e wireguard.ko ] ; then echo "Successfully compiled WireGuard module" ; else echo "Failed to compile Wireguard module" && exit 1 ; fi
+
+echo "Archiving assets"
+mkdir -p /out/lib/modules/"$KERNEL_VERSION" /out/bin
+cp ./*.ko /out/lib/modules/"$KERNEL_VERSION"
+cp ./tools/wg /out/bin/

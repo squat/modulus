@@ -245,9 +245,11 @@ install() {
     rm -rf "${MODULUS_INSTALL_DIR:?}"/"$DRIVER_NAME"
     ln -s "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"
 
-    mkdir -p "$MODULUS_LD_ROOT"/etc/ld.so.conf.d
-    echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME".conf
-    ldconfig -r "$MODULUS_LD_ROOT" 2> /dev/null
+    if [ -d "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/lib ] ; then
+        mkdir -p "$MODULUS_LD_ROOT"/etc/ld.so.conf.d
+        echo "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"/lib > "$MODULUS_LD_ROOT"/etc/ld.so.conf.d/"$DRIVER_NAME".conf
+        ldconfig -r "$MODULUS_LD_ROOT" 2> /dev/null
+    fi
     # shellcheck disable=SC1090
     source "$MODULUS_BIN_DIR"/"$DRIVER_NAME"/install
 }
@@ -315,6 +317,23 @@ download() {
     tar -xf "$t"
 }
 
+src() {
+    echo "Preparing environment"
+    # shellcheck disable=SC1091
+    . /usr/share/coreos/release
+    /usr/bin/emerge-gitclone
+    OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep coreos-overlay | cut -d\" -f 8)
+    PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep portage-stable | cut -d\" -f 8)
+    git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
+    git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
+    # try to use pre-built binaries and fall back to building from source
+    emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
+    cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
+    KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
+    make -C /usr/src/linux olddefconfig
+    make -C /usr/src/linux modules_prepare
+}
+
 usage() {
     printf '%s is a tool for automatically compiling kernel modules.\n\n' "$(basename "$0")"
     printf 'Usage:\n\n \t %s [options] command [arguments]\n\n' "$(basename "$0")"
@@ -335,6 +354,7 @@ usage() {
     printf '\t compile <module> <version> \tbuild the <module> kernel module\n'
     printf '\t download <module> <version>\tdownload the compiled kernel module and assets for <module> from S3 to %s/<module>\n' "$MODULUS_CACHE_DIR"
     printf '\t install <module> <version> \tinstall the <module> kernel module in %s/<module> and install all libraries\n' "$MODULUS_INSTALL_DIR"
+    printf '\t src                        \tdownload and install the kernel sources\n'
     printf '\t status <module> <version>  \tcheck if an up-to-date version of <module> is installed\n'
     printf '\t upload <module> <version>  \tupload the compiled kernel module and assets for <module> to s3\n'
     printf '\n'
@@ -347,6 +367,8 @@ case $1 in
         download "$2" "$3";;
     install)
         install "$2" "$3";;
+    src)
+        src;;
     status)
         check_status "$2" "$3" && exit 0 || exit 1;;
     upload)

@@ -5,9 +5,9 @@ Leveraging NVIDIA GPUs on Container Linux involves the following steps:
 * creating NVIDIA device files; and
 * loading NVIDIA libraries
 
-Compounding this complexity further is the fact that these steps have to be executed whenever the Container Linux system updates since the drivers may no longer be compatible with the new kernel.
+Compounding this complexity further is the fact that these steps have to be executed whenever the Container Linux system updates since the modules may no longer be compatible with the new kernel.
 
-Modulus takes care of automating all of these steps and ensures that the kernel modules are up-to-date for the host's kernel.
+Modulus takes care of automating all of these steps and ensures that kernel modules are up-to-date for the host's kernel.
 
 ## Installation for Kubernetes
 
@@ -44,7 +44,7 @@ journalctl -fu modulus@nvidia-390.48
 ```
 
 ## Verify
-Once Modulus has successfully run, the host should have NVIDIA device files and drivers loaded. To verify that the kernel modules were loaded, run:
+Once Modulus has successfully run, the host should have NVIDIA device files and kernel modules loaded. To verify that the kernel modules were loaded, run:
 ```sh
 lsmod | grep nvidia
 ```

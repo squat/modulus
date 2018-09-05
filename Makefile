@@ -1,6 +1,6 @@
 .PHONY: test
 
-TEST_FILES?=modulus nvidia/compile nvidia/install
+TEST_FILES?=modulus nvidia/compile nvidia/install wireguard/compile wireguard/install
 SHELLCHECK_IMAGE?=koalaman/shellcheck
 
 test:
