@@ -14,7 +14,7 @@ Compiling drivers on Container Linux is typically non-trivial because the OS shi
 Modulus works by compiling your kernel modules inside of a Container Linux developer container as documented in [[1](https://github.com/coreos/docs/blob/master/os/kernel-modules.md)] and used in [[2](https://github.com/Clarifai/coreos-nvidia)].
 Furthermore, because Container Linux updates automatically to keep your machine secure, your kernel modules can easily become out of date.
 Modulus automatically compiles kernel modules for the new version of Container Linux when your OS is upgrading so that the new modules are available when your machine restarts.
-Modulus can be used as a Kubernetes daemonset to maintain worker nodes up to date or as a systemd template unit and can be coupled with any script that compiles kernel modules.
+Modulus can be used as a Kubernetes DaemonSet to maintain worker nodes up to date or as a systemd template unit and can be coupled with any script that compiles kernel modules.
 This project currently supports generating NVIDIA and WireGuard kernel modules, however it can be extended to support any module.
 
 [1] https://github.com/coreos/docs/blob/master/os/kernel-modules.md
@@ -28,7 +28,7 @@ Modulus makes it easy to automatically compile kernel modules for NVIDIA GPUs. S
 See the [WireGuard README](https://github.com/squat/modulus/blob/master/wireguard/README.md) for detailed instructions.
 
 ## Distribution
-After compiliation, Modulus installs all the compiled assets and caches them on disk. Modulus also automatically tries to upload your compiled kernel modules to S3 so that you can compile the drivers once and reuse them across multiple machines. To enable this functionality, provide the following environment variables to the Modulus daemonset:
+After compiliation, Modulus installs all the compiled assets and caches them on disk. Modulus also automatically tries to upload your compiled kernel modules to S3 so that you can compile the drivers once and reuse them across multiple machines. To enable this functionality, provide the following environment variables to the Modulus DaemonSet:
 
 ```
 AWS_ACCESS_KEY_ID=<your-aws-access-key-id>

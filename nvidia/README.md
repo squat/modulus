@@ -15,13 +15,13 @@ Modulus takes care of automating all of these steps and ensures that kernel modu
 You will need a running Kubernetes cluster and the `kubectl` command to deploy Modulus.
 
 ### Getting Started
-Edit the provided Modulus daemonset to specify the version of NVIDIA you would like to compile, e.g. 390.48.
+Edit the provided Modulus DaemonSet to specify the version of NVIDIA you would like to compile, e.g. 390.48.
 Then create the deployment:
 ```sh
 kubectl apply -f daemonset.yaml
 ```
 
-This daemonset will run on a Modulus pod on all the Kubernetes nodes.
+This DaemonSet will run on a Modulus pod on all the Kubernetes nodes.
 You may choose to add a `nodeSelector` to schedule Modulus exclusively to nodes with GPUs.
 
 ## Installation for Systemd
