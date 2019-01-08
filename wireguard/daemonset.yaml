@@ -12,6 +12,7 @@ spec:
         name: wireguard-driver-installer
         k8s-app: wireguard-driver-installer
     spec:
+      hostNetwork: true
       hostPID: true
       initContainers:
       - image: squat/modulus:54333e0123e179be17de20e45e8a059ce2122f0d
