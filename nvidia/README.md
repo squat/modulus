@@ -78,7 +78,13 @@ Now that the kernel modules are loaded, devices are present, and libraries have 
 
 In order to give the container access to the GPU, the device files must be explicitly loaded in the namespace, and the NVIDIA libraries and binaries must be mounted in the container. Consider the following command, which runs the `nvidia-smi` command inside of a Docker container:
 ```sh
-docker run -it --device=/dev/nvidiactl --device=/dev/nvidia-uvm --device=/dev/nvidia0 --volume=/opt/nvidia/390.48:/usr/local/nvidia:ro --entrypoint=nvidia-smi nvidia/cuda:8.0-cudnn5-devel
+docker run -it \
+--device=/dev/nvidiactl \
+--device=/dev/nvidia-uvm \
+--device=/dev/nvidia0 \
+--volume=/opt/nvidia:/usr/local/nvidia:ro \
+--entrypoint=nvidia-smi \
+nvidia/cuda:9.1-devel
 ```
 
 There exist plugins that help with automating the loading of GPU devices in Docker containers; for more information, checkout the [NVIDIA-Docker](https://github.com/NVIDIA/nvidia-docker) repository.
