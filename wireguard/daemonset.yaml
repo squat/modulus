@@ -28,8 +28,6 @@ spec:
           value: "true"
         - name: MODULUS_INSTALL
           value: "true"
-        - name: MODULUS_INSTALL_DIR
-          value: /opt/drivers
         - name: MODULUS_CACHE_DIR
           value: /opt/modulus/cache
         - name: MODULUS_LD_ROOT

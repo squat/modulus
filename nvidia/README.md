@@ -68,7 +68,7 @@ This should produce output like:
 
 Finally, try running the NVIDIA system monitoring interface (SMI) command, `nvidia-smi`, to check the status of the connected GPU:
 ```sh
-/opt/nvidia/bin/nvidia-smi
+/opt/drivers/nvidia/bin/nvidia-smi
 ```
 
 If your GPU is connected, this command will return information about the model, temperature, memory usage, GPU utilization etc.
@@ -82,7 +82,7 @@ docker run -it \
 --device=/dev/nvidiactl \
 --device=/dev/nvidia-uvm \
 --device=/dev/nvidia0 \
---volume=/opt/nvidia:/usr/local/nvidia:ro \
+--volume=/opt/drivers/nvidia:/usr/local/nvidia:ro \
 --entrypoint=nvidia-smi \
 nvidia/cuda:9.1-devel
 ```
