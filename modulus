@@ -242,6 +242,7 @@ bin_to_tar() {
 install() {
     local DRIVER_NAME=$1
     local DRIVER_VERSION=$2
+    mkdir -p "$MODULUS_INSTALL_DIR"
     rm -rf "${MODULUS_INSTALL_DIR:?}"/"$DRIVER_NAME"
     ln -s "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" "$MODULUS_INSTALL_DIR"/"$DRIVER_NAME"
 
