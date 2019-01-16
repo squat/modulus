@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# This is an NVIDIA dep that is not specified in the module.dep file.
+modprobe ipmi_devintf
 depmod -b "$MODULUS_INSTALL_DIR/$DRIVER_NAME"
 modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME" nvidia
 modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME" nvidia-uvm
