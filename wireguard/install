@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-depmod -b /root
-modprobe -d /root udp_tunnel
-modprobe -d /root ip6_udp_tunnel
+depmod -b "$MODULUS_LD_ROOT"
+modprobe -d "$MODULUS_LD_ROOT" udp_tunnel
+modprobe -d "$MODULUS_LD_ROOT" ip6_udp_tunnel
 depmod -b "$MODULUS_INSTALL_DIR/$DRIVER_NAME"
 modprobe -d "$MODULUS_INSTALL_DIR/$DRIVER_NAME" wireguard
