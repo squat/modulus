@@ -14,7 +14,7 @@ spec:
     spec:
       hostPID: true
       initContainers:
-      - image: squat/modulus:db173162389c70af04e8a08ecc9222748c319c53
+      - image: squat/modulus:949ab1ed36d91ec410681c98d3d8ceb8ef6960c9
         name: modulus
         args:
         - compile
