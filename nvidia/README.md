@@ -32,15 +32,15 @@ First, make sure you have the [Modulus code available](https://github.com/squat/
 ### Getting Started
 Enable and start the `modulus` template unit file with the desired NVIDIA version, e.g. 390.48:
 ```sh
-sudo systemctl enable modulus@nvidia-390.48
-sudo systemctl start modulus@nvidia-390.48
+sudo systemctl enable modulus@nvidia-396.18
+sudo systemctl start modulus@nvidia-396.18
 ```
 
 This service takes care of automatically compiling, installing, backing up, and loading the NVIDIA kernel modules as well as creating the NVIDIA device files.
 
 Compiling the NVIDIA kernel modules can take between 10-15 minutes depending on your Internet speed, CPU, and RAM. To check the progress of the compilation, run:
 ```sh
-journalctl -fu modulus@nvidia-390.48
+journalctl -fu modulus@nvidia-396.18
 ```
 
 ## Verify
