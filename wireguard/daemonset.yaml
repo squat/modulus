@@ -20,7 +20,7 @@ spec:
         args:
         - compile
         - wireguard
-        - "0.0.20180904"
+        - "0.0.20190406"
         securityContext:
           privileged: true
         env:

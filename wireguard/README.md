@@ -13,7 +13,7 @@ Modulus takes care of automating all of these steps and ensures that kernel modu
 You will need a running Kubernetes cluster and the `kubectl` command to deploy Modulus.
 
 ### Getting Started
-Edit the provided Modulus DaemonSet to specify the version of WireGuard you would like to compile, e.g. 0.0.20180904.
+Edit the provided Modulus DaemonSet to specify the version of WireGuard you would like to compile, e.g. 0.0.20190406.
 Then create the deployment:
 ```sh
 kubectl apply -f daemonset.yaml
@@ -27,17 +27,17 @@ This DaemonSet will run on a Modulus pod on all the Kubernetes nodes.
 First, make sure you have the [Modulus code available](https://github.com/squat/modulus#installation) on your Container Linux machine and that the `modulus` service is installed.
 
 ### Getting Started
-Enable and start the `modulus` template unit file with the desired WireGuard version, e.g. 0.0.20180904:
+Enable and start the `modulus` template unit file with the desired WireGuard version, e.g. 0.0.20190406:
 ```sh
-sudo systemctl enable modulus@wireguard-0.0.20180904
-sudo systemctl start modulus@wireguard-0.0.20180904
+sudo systemctl enable modulus@wireguard-0.0.20190406
+sudo systemctl start modulus@wireguard-0.0.20190406
 ```
 
 This service takes care of automatically compiling, installing, backing up, and loading the WireGuard kernel modules.
 
 Compiling the WireGuard kernel modules can take around 5-10 minutes depending on your Internet speed, CPU, and RAM. To check the progress of the compilation, run:
 ```sh
-journalctl -fu modulus@wireguard-0.0.20180904
+journalctl -fu modulus@wireguard-0.0.20190406
 ```
 
 ## Verify
