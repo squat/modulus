@@ -18,7 +18,7 @@ You will need a running Kubernetes cluster and the `kubectl` command to deploy M
 Edit the provided Modulus DaemonSet to specify the version of NVIDIA you would like to compile, e.g. 390.48.
 Then create the deployment:
 ```sh
-kubectl apply -f daemonset.yaml
+kubectl apply -f https://raw.githubusercontent.com/squat/modulus/master/nvidia/daemonset.yaml
 ```
 
 This DaemonSet will run on a Modulus pod on all the Kubernetes nodes.
