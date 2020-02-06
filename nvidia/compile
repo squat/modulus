@@ -12,6 +12,7 @@ curl -Ls "http://us.download.nvidia.com/XFree86/Linux-x86_64/$DRIVER_VERSION/NVI
 chmod +x nvidia.run
 ./nvidia.run -x -s
 pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
+export IGNORE_MISSING_MODULE_SYMVERS=1
 ./nvidia-installer -s -n --kernel-source-path=/usr/src/linux --no-check-for-alternate-installs --no-opengl-files --kernel-install-path="$PWD" --log-file-name="$PWD"/nvidia-installer.log || true
 if [ -e kernel/nvidia.ko ] ; then echo "Successfully compiled NVIDIA modules" ; else echo "Failed to compile NVIDIA modules" && cat "$PWD"/nvidia-installer.log && exit 1 ; fi
 
