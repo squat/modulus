@@ -1,16 +1,19 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: wireguard-driver-installer
   namespace: kube-system
   labels:
-    k8s-app: wireguard-driver-installer
+    app.kubernetes.io/name: wireguard-driver-installer
 spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wireguard-driver-installer
   template:
     metadata:
       labels:
         name: wireguard-driver-installer
-        k8s-app: wireguard-driver-installer
+        app.kubernetes.io/name: wireguard-driver-installer
     spec:
       hostNetwork: true
       hostPID: true

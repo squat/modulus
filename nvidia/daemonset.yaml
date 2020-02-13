@@ -1,16 +1,19 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: nvidia-driver-installer
   namespace: kube-system
   labels:
-    k8s-app: nvidia-driver-installer
+    app.kubernetes.io/name: nvidia-driver-installer
 spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nvidia-driver-installer
   template:
     metadata:
       labels:
         name: nvidia-driver-installer
-        k8s-app: nvidia-driver-installer
+        app.kubernetes.io/name: nvidia-driver-installer
     spec:
       hostPID: true
       initContainers:
