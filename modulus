@@ -120,7 +120,7 @@ compile() {
         pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
         curl -L https://www.flatcar-linux.org/security/image-signing-key/Flatcar_Image_Signing_Key.asc | gpg --import
 
-        curl -L "$CONTAINER_URL" | tee >(bzip2 -d > flatcar_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
+        curl -L "$CONTAINER_URL" | tee >(bzip2 -d > flatcar_developer_container.bin) | gpg2 --verify <(curl -LsS "$CONTAINER_URL.sig") -
 
         if [ "$MODULUS_CHROOT" = true ] ; then
             truncate_bin flatcar_developer_container.bin
