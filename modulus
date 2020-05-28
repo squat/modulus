@@ -115,12 +115,20 @@ compile() {
     if [ "$MODULUS_FORCE" = true ] || ! check_status "$DRIVER_NAME" "$DRIVER_VERSION" && ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ; then
         local CONTAINER_URL=https://$MODULUS_GROUP.release.flatcar-linux.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/flatcar_developer_container.bin.bz2
 
-        echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
+        echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Flatcar Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
         mkdir -p "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"
         pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-        curl -L https://www.flatcar-linux.org/security/image-signing-key/Flatcar_Image_Signing_Key.asc | gpg --import
+        curl -L https://www.flatcar-linux.org/security/image-signing-key/Flatcar_Image_Signing_Key.asc | gpg --import --keyid-format LONG
 
-        curl -L "$CONTAINER_URL" | tee >(bzip2 -d > flatcar_developer_container.bin) | gpg2 --verify <(curl -LsS "$CONTAINER_URL.sig") -
+        echo "Downloading Flatcar developer container: $CONTAINER_URL"
+        curl -L -O "$CONTAINER_URL"
+        ls -alt
+        cat flatcar_developer_container.bin.bz2
+        echo "Verifying developer container"
+        curl -LsS "$CONTAINER_URL.sig" | gpg2 --verify flatcar_developer_container.bin.bz2
+        echo "Extracting develper container"
+        bzip2 -d flatcar_developer_container.bin.bz2
+
 
         if [ "$MODULUS_CHROOT" = true ] ; then
             truncate_bin flatcar_developer_container.bin
