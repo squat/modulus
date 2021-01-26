@@ -8,7 +8,7 @@ set -e
     [ -f /etc/coreos/update.conf ] && source /etc/coreos/update.conf
 }
 MODULUS_BIN_DIR=${MODULUS_BIN_DIR:-/opt/modulus}
-# shellcheck disable=SC1090
+# shellcheck disable=SC1091
 [ -e "$MODULUS_BIN_DIR"/.env ] && source "$MODULUS_BIN_DIR"/.env
 MODULUS_CACHE_DIR=${MODULUS_CACHE_DIR:-$MODULUS_BIN_DIR/archive}
 MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$FLATCAR_RELEASE_BOARD}
