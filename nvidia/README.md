@@ -15,7 +15,7 @@ Modulus takes care of automating all of these steps and ensures that kernel modu
 You will need a running Kubernetes cluster and the `kubectl` command to deploy Modulus.
 
 ### Getting Started
-Edit the provided Modulus DaemonSet to specify the version of NVIDIA you would like to compile, e.g. 440.59.
+Edit the provided Modulus DaemonSet to specify the version of NVIDIA you would like to compile, e.g. 440.64.
 Then create the deployment:
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/squat/modulus/master/nvidia/daemonset.yaml
@@ -30,17 +30,17 @@ You may choose to add a `nodeSelector` to schedule Modulus exclusively to nodes 
 First, make sure you have the [Modulus code available](https://github.com/squat/modulus#installation) on your Container Linux machine and that the `modulus` service is installed.
 
 ### Getting Started
-Enable and start the `modulus` template unit file with the desired NVIDIA version, e.g. 440.59:
+Enable and start the `modulus` template unit file with the desired NVIDIA version, e.g. 440.64:
 ```sh
-sudo systemctl enable modulus@nvidia-440.59
-sudo systemctl start modulus@nvidia-440.59
+sudo systemctl enable modulus@nvidia-440.64
+sudo systemctl start modulus@nvidia-440.64
 ```
 
 This service takes care of automatically compiling, installing, backing up, and loading the NVIDIA kernel modules as well as creating the NVIDIA device files.
 
 Compiling the NVIDIA kernel modules can take between 10-15 minutes depending on your Internet speed, CPU, and RAM. To check the progress of the compilation, run:
 ```sh
-journalctl -fu modulus@nvidia-440.59
+journalctl -fu modulus@nvidia-440.64
 ```
 
 ## Verify

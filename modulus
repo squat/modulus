@@ -8,17 +8,17 @@ set -e
     [ -f /etc/coreos/update.conf ] && source /etc/coreos/update.conf
 }
 MODULUS_BIN_DIR=${MODULUS_BIN_DIR:-/opt/modulus}
-# shellcheck disable=SC1090
+# shellcheck disable=SC1091
 [ -e "$MODULUS_BIN_DIR"/.env ] && source "$MODULUS_BIN_DIR"/.env
 MODULUS_CACHE_DIR=${MODULUS_CACHE_DIR:-$MODULUS_BIN_DIR/archive}
-MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$COREOS_RELEASE_BOARD}
-MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$COREOS_RELEASE_VERSION}
+MODULUS_COREOS_RELEASE_BOARD=${MODULUS_COREOS_RELEASE_BOARD:-$FLATCAR_RELEASE_BOARD}
+MODULUS_COREOS_RELEASE_VERSION=${MODULUS_COREOS_RELEASE_VERSION:-$FLATCAR_RELEASE_VERSION}
 MODULUS_CHROOT=${MODULUS_CHROOT:-false}
 MODULUS_DOCKER=${MODULUS_DOCKER:-false}
 MODULUS_DOWNLOAD=${MODULUS_DOWNLOAD:-false}
 MODULUS_FORCE=${MODULUS_FORCE:-false}
 MODULUS_GROUP=${MODULUS_GROUP:-$GROUP}
-MODULUS_IMAGE_VOLSIZE_GIB=${MODULUS_IMAGE_VOLSIZE_GIB:-4}
+MODULUS_IMAGE_VOLSIZE_GIB=${MODULUS_IMAGE_VOLSIZE_GIB:-5}
 MODULUS_INSTALL=${MODULUS_INSTALL:-false}
 MODULUS_INSTALL_DIR=${MODULUS_INSTALL_DIR:-/opt/drivers}
 MODULUS_LD_ROOT=${MODULUS_LD_ROOT:-/}
@@ -113,20 +113,20 @@ compile() {
     fi
 
     if [ "$MODULUS_FORCE" = true ] || ! check_status "$DRIVER_NAME" "$DRIVER_VERSION" && ! check_cache "$DRIVER_NAME" "$DRIVER_VERSION" ; then
-        local CONTAINER_URL=http://$MODULUS_GROUP.release.core-os.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/coreos_developer_container.bin.bz2
+        local CONTAINER_URL=https://$MODULUS_GROUP.release.flatcar-linux.net/$MODULUS_COREOS_RELEASE_BOARD/$MODULUS_COREOS_RELEASE_VERSION/flatcar_developer_container.bin.bz2
 
         echo "Compiling kernel modules for $DRIVER_NAME $DRIVER_VERSION, Container Linux $MODULUS_GROUP $MODULUS_COREOS_RELEASE_BOARD $MODULUS_COREOS_RELEASE_VERSION"
         mkdir -p "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION"
         pushd "$MODULUS_CACHE_DIR"/"$DRIVER_NAME"/"$DRIVER_VERSION" > /dev/null
-        curl https://coreos.com/security/image-signing-key/CoreOS_Image_Signing_Key.asc | gpg --import
+        curl -L https://www.flatcar-linux.org/security/image-signing-key/Flatcar_Image_Signing_Key.asc | gpg --import
 
-        curl -L "$CONTAINER_URL" | tee >(bzip2 -d > coreos_developer_container.bin) | gpg2 --verify <(curl -Ls "$CONTAINER_URL.sig") -
+        curl -L "$CONTAINER_URL" | tee >(bzip2 -d > flatcar_developer_container.bin) | gpg2 --verify <(curl -LsS "$CONTAINER_URL.sig") -
 
         if [ "$MODULUS_CHROOT" = true ] ; then
-            truncate_bin coreos_developer_container.bin
+            truncate_bin flatcar_developer_container.bin
             # shellcheck disable=SC2155
             local DIR=$(mktemp -d)
-            mount coreos_developer_container.bin "$DIR"
+            mount flatcar_developer_container.bin "$DIR"
             mkdir -p "$DIR"/opt/modulus
             mount -o bind,ro "$MODULUS_BIN_DIR" "$DIR"/opt/modulus
             mkdir -p "$DIR"/out
@@ -136,23 +136,23 @@ compile() {
             umount "$DIR"/opt/modulus
             umount "$DIR"
         elif [ "$MODULUS_DOCKER" = true ] ; then
-            bin_to_tar coreos_developer_container.bin coreos_developer_container
+            bin_to_tar flatcar_developer_container.bin flatcar_developer_container
             docker run --rm \
                 -v "$MODULUS_BIN_DIR":/opt/modulus:ro \
                 -v "$PWD":/out \
                 -e DRIVER_VERSION="$DRIVER_VERSION" \
-                coreos_developer_container /opt/modulus/"$DRIVER_NAME"/compile
+                flatcar_developer_container /opt/modulus/"$DRIVER_NAME"/compile
         else
             systemd-nspawn \
                 --as-pid2 \
                 --bind-ro="$MODULUS_BIN_DIR":/opt/modulus \
                 --bind="$PWD":/out \
                 --setenv=DRIVER_VERSION="$DRIVER_VERSION" \
-                --image=coreos_developer_container.bin \
+                --image=flatcar_developer_container.bin \
                 --register=no \
                 /opt/modulus/"$DRIVER_NAME"/compile
         fi
-        rm -f coreos_developer_container.bin
+        rm -f flatcar_developer_container.bin
     fi
 
     if [ "$MODULUS_UPLOAD" = true ] ; then
@@ -256,7 +256,7 @@ upload() {
     mkdir -p "$MODULUS_CACHE_DIR"
     pushd "$MODULUS_CACHE_DIR" > /dev/null
     local t="$MODULUS_COREOS_RELEASE_VERSION"-"$MODULUS_GROUP"-"$DRIVER_NAME"-"$DRIVER_VERSION".tar.gz
-    tar -czf "$t" --exclude=coreos_developer_container* "$DRIVER_NAME"/"$DRIVER_VERSION"
+    tar -czf "$t" --exclude=flatcar_developer_container* "$DRIVER_NAME"/"$DRIVER_VERSION"
 
     if aws --version ; then
         aws s3 cp "$t" "$MODULUS_S3_BUCKET"
@@ -322,13 +322,13 @@ src() {
     # shellcheck disable=SC1091
     . /usr/share/coreos/release
     /usr/bin/emerge-gitclone
-    OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep coreos-overlay | cut -d\" -f 8)
-    PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/coreos/manifest/v"$COREOS_RELEASE_VERSION"/release.xml | grep portage-stable | cut -d\" -f 8)
+    OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/kinvolk/manifest/v"$FLATCAR_RELEASE_VERSION"/main.xml | grep kinvolk/coreos-overlay | sed 's/.*revision="//; s/".*//')
+    PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/kinvolk/manifest/v"$FLATCAR_RELEASE_VERSION"/main.xml | grep kinvolk/portage-stable | sed 's/.*revision="//; s/".*//')
     git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
     git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
     # try to use pre-built binaries and fall back to building from source
     emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
-    cp /lib/modules/*-coreos*/build/.config /usr/src/linux/.config
+    cp /lib/modules/*-flatcar*/build/.config /usr/src/linux/.config
     KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
     make -C /usr/src/linux olddefconfig
     make -C /usr/src/linux modules_prepare
