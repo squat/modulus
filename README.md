@@ -1,5 +1,5 @@
 # modulus
-Automatically compile kernel modules for CoreOS Container Linux.
+Automatically compile kernel modules for Flatcar Linux.
 
 [![Build Status](https://semaphoreci.com/api/v1/squat/modulus/branches/master/shields_badge.svg)](https://semaphoreci.com/squat/modulus)
 
@@ -10,10 +10,10 @@ kubectl apply -f https://raw.githubusercontent.com/squat/modulus/master/nvidia/d
 ```
 
 ## Background
-Compiling drivers on Container Linux is typically non-trivial because the OS ships without build tools and no obvious way to access the kernel sources.
-Modulus works by compiling your kernel modules inside of a Container Linux developer container as documented in [[1](https://github.com/coreos/docs/blob/master/os/kernel-modules.md)] and used in [[2](https://github.com/Clarifai/coreos-nvidia)].
-Furthermore, because Container Linux updates automatically to keep your machine secure, your kernel modules can easily become out of date.
-Modulus automatically compiles kernel modules for the new version of Container Linux when your OS is upgrading so that the new modules are available when your machine restarts.
+Compiling drivers on Flatcar Linux is typically non-trivial because the OS ships without build tools and no obvious way to access the kernel sources.
+Modulus works by compiling your kernel modules inside of a Flatcar Linux developer Flatcar as documented in [[1](https://github.com/coreos/docs/blob/master/os/kernel-modules.md)] and used in [[2](https://github.com/Clarifai/coreos-nvidia)].
+Furthermore, because Flatcar Linux updates automatically to keep your machine secure, your kernel modules can easily become out of date.
+Modulus automatically compiles kernel modules for the new version of Flatcar Linux when your OS is upgrading so that the new modules are available when your machine restarts.
 Modulus can be used as a Kubernetes DaemonSet to maintain worker nodes up to date or as a systemd template unit and can be coupled with any script that compiles kernel modules.
 This project currently supports generating NVIDIA and WireGuard kernel modules, however it can be extended to support any module.
 
