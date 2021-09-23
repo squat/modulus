@@ -330,9 +330,10 @@ src() {
     # try to use pre-built binaries and fall back to building from source
     emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
     # prepare filesystem
-    cp /usr/lib64/modules/$(ls /usr/lib64/modules)/build/.config /usr/src/linux/ \
+    MODULES="$(ls /usr/lib64/modules)"
+    cp "/usr/lib64/modules/$MODULES/build/.config" /usr/src/linux/ \
       && make -C /usr/src/linux modules_prepare \
-      && cp /usr/lib64/modules/$(ls /usr/lib64/modules)/build/Module.symvers /usr/src/linux/
+      && cp "/usr/lib64/modules/$MODULES/build/Module.symvers" /usr/src/linux/
 }
 
 usage() {
