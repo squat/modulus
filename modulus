@@ -322,16 +322,16 @@ src() {
     # shellcheck disable=SC1091
     . /usr/share/coreos/release
     /usr/bin/emerge-gitclone
-    OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/kinvolk/manifest/v"$FLATCAR_RELEASE_VERSION"/main.xml | grep kinvolk/coreos-overlay | sed 's/.*revision="//; s/".*//')
-    PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/kinvolk/manifest/v"$FLATCAR_RELEASE_VERSION"/main.xml | grep kinvolk/portage-stable | sed 's/.*revision="//; s/".*//')
+    FLATCAR_BUILD=$(echo $FLATCAR_RELEASE_VERSION | awk -F . '{print $1}')
+    OVERLAY_VERSION="flatcar-${FLATCAR_BUILD}"
+    PORTAGE_VERSION="flatcar-${FLATCAR_BUILD}"
     git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
     git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
     # try to use pre-built binaries and fall back to building from source
     emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
-    cp /lib/modules/*-flatcar*/build/.config /usr/src/linux/.config
-    KERNEL_VERSION=$(head -n 3 /usr/src/linux/.config | tail -n 1 | awk '{print $3}')
-    make -C /usr/src/linux olddefconfig
-    make -C /usr/src/linux modules_prepare
+    cp /usr/lib64/modules/$(ls /usr/lib64/modules)/build/.config /usr/src/linux/ \
+      && make -C /usr/src/linux modules_prepare \
+      && cp /usr/lib64/modules/$(ls /usr/lib64/modules)/build/Module.symvers /usr/src/linux/
 }
 
 usage() {

@@ -13,6 +13,7 @@ chmod +x nvidia.run
 ./nvidia.run -x -s
 pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
 export IGNORE_MISSING_MODULE_SYMVERS=1
+export KERNEL_VERSION=$(cat /usr/src/linux/include/config/kernel.release || ls /lib/modules)
 ./nvidia-installer -s -n \
     --kernel-name="$KERNEL_VERSION" \
     --kernel-source-path=/usr/src/linux \
