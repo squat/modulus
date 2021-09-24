@@ -22,7 +22,7 @@ spec:
         args:
         - compile
         - nvidia
-        - "470.74"
+        - "440.64"
         securityContext:
           privileged: true
         env:
