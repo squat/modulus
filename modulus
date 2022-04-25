@@ -322,10 +322,10 @@ src() {
     # shellcheck disable=SC1091
     . /usr/share/coreos/release
     /usr/bin/emerge-gitclone
-    OVERLAY_VERSION=$(curl -s https://raw.githubusercontent.com/kinvolk/manifest/v"$FLATCAR_RELEASE_VERSION"/main.xml | grep kinvolk/coreos-overlay | sed 's/.*revision="//; s/".*//')
-    PORTAGE_VERSION=$(curl -s https://raw.githubusercontent.com/kinvolk/manifest/v"$FLATCAR_RELEASE_VERSION"/main.xml | grep kinvolk/portage-stable | sed 's/.*revision="//; s/".*//')
-    git -C /var/lib/portage/coreos-overlay checkout "$OVERLAY_VERSION"
-    git -C /var/lib/portage/portage-stable checkout "$PORTAGE_VERSION"
+    OVERLAY_VERSION="$MODULUS_GROUP-$MODULUS_COREOS_RELEASE_VERSION"
+    PORTAGE_VERSION="$MODULUS_GROUP-$MODULUS_COREOS_RELEASE_VERSION"
+    git -C /var/lib/portage/coreos-overlay checkout "tags/$OVERLAY_VERSION" -b "$OVERLAY_VERSION"
+    git -C /var/lib/portage/portage-stable checkout "tags/$PORTAGE_VERSION" -b "tags/$PORTAGE_VERSION"
     # try to use pre-built binaries and fall back to building from source
     emerge -gKq --jobs 4 --load-average 4 coreos-sources || emerge -q --jobs 4 --load-average 4 coreos-sources
     cp /lib/modules/*-flatcar*/build/.config /usr/src/linux/.config
