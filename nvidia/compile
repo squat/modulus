@@ -15,7 +15,6 @@ pushd "./NVIDIA-Linux-x86_64-$DRIVER_VERSION"
 export IGNORE_MISSING_MODULE_SYMVERS=1
 ./nvidia-installer -s -n \
     --kernel-name="$KERNEL_VERSION" \
-    --kernel-source-path=/usr/src/linux \
     --no-check-for-alternate-installs \
     --no-opengl-files \
     --no-distro-scripts \
