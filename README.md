@@ -1,12 +1,12 @@
 # modulus
 Automatically compile kernel modules for Flatcar Linux.
 
-[![Build Status](https://semaphoreci.com/api/v1/squat/modulus/branches/master/shields_badge.svg)](https://semaphoreci.com/squat/modulus)
+[![Build Status](https://semaphoreci.com/api/v1/squat/modulus/branches/main/shields_badge.svg)](https://semaphoreci.com/squat/modulus)
 
 ## Installation
 To deploy Modulus to a Kubernetes cluster to install and maintain NVIDIA GPU drivers, run:
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/squat/modulus/master/nvidia/daemonset.yaml
+kubectl apply -f https://raw.githubusercontent.com/squat/modulus/main/nvidia/daemonset.yaml
 ```
 
 ## Background
@@ -22,10 +22,10 @@ This project currently supports generating NVIDIA and WireGuard kernel modules, 
 [2] https://github.com/Clarifai/coreos-nvidia
 
 ## Compiling NVIDIA Kernel Modules
-Modulus makes it easy to automatically compile kernel modules for NVIDIA GPUs. See the [NVIDIA README](https://github.com/squat/modulus/blob/master/nvidia/README.md) for detailed instructions.
+Modulus makes it easy to automatically compile kernel modules for NVIDIA GPUs. See the [NVIDIA README](https://github.com/squat/modulus/blob/main/nvidia/README.md) for detailed instructions.
 
 ## Compiling WireGuard Kernel Modules
-See the [WireGuard README](https://github.com/squat/modulus/blob/master/wireguard/README.md) for detailed instructions.
+See the [WireGuard README](https://github.com/squat/modulus/blob/main/wireguard/README.md) for detailed instructions.
 
 ## Distribution
 After compiliation, Modulus installs all the compiled assets and caches them on disk. Modulus also automatically tries to upload your compiled kernel modules to S3 so that you can compile the drivers once and reuse them across multiple machines. To enable this functionality, provide the following environment variables to the Modulus DaemonSet:
