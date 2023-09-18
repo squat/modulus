@@ -214,7 +214,6 @@ resize_image_vol() {
     # Avoid resize2fs error: ext2fs_check_mount_point: Can't check if filesystem
     # is mounted due to missing mtab file while determining whether
     # flatcar_developer_container.bin is mounted:
-    # https://github.com/microsoft/WSL/issues/3984#issuecomment-491684299
     # https://github.com/squat/modulus/pull/24
     if [ ! -f /etc/mtab ]; then
         ln -s /proc/self/mounts /etc/mtab
