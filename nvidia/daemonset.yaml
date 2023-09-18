@@ -22,7 +22,7 @@ spec:
         args:
         - compile
         - nvidia
-        - "470.103.01"
+        - "535.104.05"
         securityContext:
           privileged: true
         env:
