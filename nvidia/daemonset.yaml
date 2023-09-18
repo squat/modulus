@@ -17,12 +17,12 @@ spec:
     spec:
       hostPID: true
       initContainers:
-      - image: squat/modulus:4c946362b8267c4680618c39489d873ed386f807
+      - image: squat/modulus:85f9128a80cf47adea85fc008b8c2dcbfad6da86
         name: modulus
         args:
         - compile
         - nvidia
-        - "470.103.01"
+        - "535.104.05"
         securityContext:
           privileged: true
         env:

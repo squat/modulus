@@ -102,3 +102,16 @@ Once the device plugin is running, verify that the desired nodes have allocatabl
 ```sh
 kubectl describe node <node-name>
 ```
+
+## Compatibility Matrix
+
+Here we list combinations of Flatcar Linux, Linux kernel and Nvidia versions for
+which it is known that the Nvidia modules build successfully using modulus. This
+table was created in response to Nvidia modules [failing to build on recent
+versions of Flatcar Linux in the
+past](https://github.com/squat/modulus/issues/18):
+
+| Flatcar | Kernel | Nvidia |
+|-|-|-|
+| 2605.12.0 | 5.4.92 | 440.64 |
+| 3510.2.7 | 5.15.125 | 535.104.05 |
