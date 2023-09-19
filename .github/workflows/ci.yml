@@ -58,7 +58,11 @@ jobs:
       with:
         tags: modulus
         load: true
-    - run: |
+    - env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        MODULUS_S3_BUCKET: ${{ secrets.MODULUS_S3_BUCKET }}
+      run: |
         export MODULE=${{ matrix.module }}
         export VERSION=${{ matrix.version }}
         export MODULUS_GROUP=${{ matrix.group }}
@@ -117,6 +121,7 @@ jobs:
     - compile-chroot
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v3
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Login to DockerHub
