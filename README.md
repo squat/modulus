@@ -1,7 +1,7 @@
 # modulus
 Automatically compile kernel modules for Flatcar Linux.
 
-[![Build Status](https://semaphoreci.com/api/v1/squat/modulus/branches/main/shields_badge.svg)](https://semaphoreci.com/squat/modulus)
+[![Build Status](https://github.com/squat/modulus/workflows/CI/badge.svg)](https://github.com/squat/modulus/actions?query=workflow%3ACI)
 
 ## Installation
 To deploy Modulus to a Kubernetes cluster to install and maintain NVIDIA GPU drivers, run:
