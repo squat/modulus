@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - "*"
+  pull_request:
+  schedule:
+  - cron:  '0 0 * * *'
+  workflow_dispatch:
+
+env:
+  NVIDIA_VERSION: 535.104.05
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build container
+      uses: docker/build-push-action@v4
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: ShellCheck
+      uses: ludeeus/action-shellcheck@2.0.0
+
+  stable-NVIDIA:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build container
+      uses: docker/build-push-action@v4
+      with:
+        tags: modulus
+    - run: |
+        export MODULUS_GROUP=stable
+        export MODULUS_COREOS_RELEASE_VERSION="$(curl https://"$MODULUS_GROUP".release.flatcar-linux.net/amd64-usr/current/version.txt --silent | grep FLATCAR_VERSION= | tr '=' ' ' | awk '{print $2}')"
+        OPTS=
+        if [ -n "$MODULUS_S3_BUCKET" ]; then OPTS=-u; fi
+        docker run --rm -it -v "$PWD"/out:/out --env-file <(env | grep "MODULUS\|AWS") --privileged modulus -C -d /out -b amd64-usr $OPTS compile nvidia "$NVIDIA_VERSION"
+        ls -al out/nvidia/"$NVIDIA_VERSION"/lib/modules/*/nvidia.ko
+
+  beta-NVIDIA:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        sudo apt-get update && sudo apt-get install -y gnupg2 gdisk
+        export MODULUS_GROUP=beta
+        export MODULUS_COREOS_RELEASE_VERSION="$(curl https://"$MODULUS_GROUP".release.flatcar-linux.net/amd64-usr/current/version.txt --silent | grep FLATCAR_VERSION= | tr '=' ' ' | awk '{print $2}')"
+        export MODULUS_BIN_DIR=$PWD
+        OPTS=
+        if [ -n "$MODULUS_S3_BUCKET" ]; then OPTS=-u; fi
+        sudo -E ./modulus -D -d "$PWD"/out -b amd64-usr $OPTS compile nvidia "$NVIDIA_VERSION"
+        ls -al out/nvidia/"$NVIDIA_VERSION"/lib/modules/*/nvidia.ko
+
+  alpha-NVIDIA:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        export MODULUS_GROUP=alpha
+        export MODULUS_COREOS_RELEASE_VERSION="$(curl https://"$MODULUS_GROUP".release.flatcar-linux.net/amd64-usr/current/version.txt --silent | grep FLATCAR_VERSION= | tr '=' ' ' | awk '{print $2}')"
+        export MODULUS_BIN_DIR=$PWD
+        OPTS=
+        if [ -n "$MODULUS_S3_BUCKET" ]; then OPTS=-u; fi
+        sudo -E ./modulus -CD -d "$PWD"/out -b amd64-usr $OPTS compile nvidia "$NVIDIA_VERSION"
+        ls -al out/nvidia/"$NVIDIA_VERSION"/lib/modules/*/nvidia.ko
+
+  push:
+    if: github.event_name != 'pull_request'
+    needs:
+    - container
+    - lint
+    - stable-NVIDIA
+    - beta-NVIDIA
+    - alpha-NVIDIA
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Determine SHA
+      id: sha
+      run: echo "::set-output name=sha::$(git describe --always --tags --dirty)"
+    - name: Build and push
+      id: push
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        platforms: linux/amd64
+        tags: ghcr.io/squat/modulus:latest, ghcr.io/squat/modulus:${{ steps.sha.outputs.sha }}, squat/modulus:latest, squat/modulus:${{ steps.sha.outputs.sha }}
+    - name: Determine digest
+      run: echo ${{ steps.push.outputs.digest }}
