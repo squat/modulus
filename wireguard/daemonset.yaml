@@ -51,7 +51,7 @@ spec:
         - name: dev
           mountPath: /dev
       containers:
-      - image: k8s.gcr.io/pause-amd64:3.1
+      - image: registry.k8s.io/pause:3.9
         name: pause
       tolerations:
       - key: "node-role.kubernetes.io/master"
