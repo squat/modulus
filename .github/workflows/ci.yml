@@ -32,12 +32,22 @@ jobs:
   compile-docker:
     strategy:
       matrix:
-        group: [stable, beta, alpha]
         include:
         - module: nvidia
           version: 535.104.05
+          group: stable
+        - module: nvidia
+          version: 535.104.05
+          group: beta
+        - module: nvidia
+          version: 535.104.05
+          group: alpha
         - module: nvidia
           version: 470.103.01
+          group: stable
+        - module: nvidia
+          version: 470.103.01
+          group: beta
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -61,10 +71,10 @@ jobs:
   compile:
     strategy:
       matrix:
-        group: [stable]
         include:
         - module: nvidia
           version: 535.104.05
+          group: stable
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -81,10 +91,10 @@ jobs:
   compile-chroot:
     strategy:
       matrix:
-        group: [stable]
         include:
         - module: nvidia
           version: 535.104.05
+          group: stable
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -96,3 +106,39 @@ jobs:
         export MODULUS_BIN_DIR=$PWD
         sudo -E ./modulus -CD -d "$PWD"/out -b amd64-usr compile "$MODULE" "$VERSION"
         ls -al out/"$MODULE"/"$VERSION"/lib/modules/*/"$MODULE".ko
+
+  push:
+    if: github.event_name != 'pull_request' && github.event_name != 'schedule'
+    needs:
+    - container
+    - lint
+    - compile-docker
+    - compile
+    - compile-chroot
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Determine SHA
+      id: sha
+      run: echo "::set-output name=sha::$(git describe --always --tags --dirty)"
+    - name: Build and push
+      id: push
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        platforms: linux/amd64
+        tags: ghcr.io/squat/modulus:latest, ghcr.io/squat/modulus:${{ steps.sha.outputs.sha }}, squat/modulus:latest, squat/modulus:${{ steps.sha.outputs.sha }}
+    - name: Determine digest
+      run: echo ${{ steps.push.outputs.digest }}
