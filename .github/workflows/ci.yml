@@ -45,9 +45,6 @@ jobs:
         - module: nvidia
           version: 470.103.01
           group: stable
-        - module: nvidia
-          version: 470.103.01
-          group: beta
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

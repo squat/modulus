@@ -105,13 +105,16 @@ kubectl describe node <node-name>
 
 ## Compatibility Matrix
 
-Here we list combinations of Flatcar Linux, Linux kernel and Nvidia versions for
-which it is known that the Nvidia modules build successfully using modulus. This
-table was created in response to Nvidia modules [failing to build on recent
+Here we list combinations of Flatcar Linux, Linux kernel and NVIDIA versions for
+which it is known that the NVIDIA modules build successfully using modulus. This
+table was created in response to NVIDIA modules [failing to build on recent
 versions of Flatcar Linux in the
 past](https://github.com/squat/modulus/issues/18):
 
-| Flatcar | Kernel | Nvidia |
+| Flatcar | Kernel | NVIDIA |
 |-|-|-|
 | 2605.12.0 | 5.4.92 | 440.64 |
+| 3510.2.8 | 5.15.129 | 470.103.01 |
+| 3602.1.6 | 5.15.132 | 470.103.01 |
 | 3510.2.7 | 5.15.125 | 535.104.05 |
+| 3745.0.0 | 6.1.55 | 535.104.05 |
